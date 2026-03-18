@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tender Radar — SA Built Environment</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#0c0c0f;color:#e0ddd6;font-size:13px;line-height:1.6;min-height:100vh;}
+::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:#2a2a35;border-radius:2px;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.6)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.topbar{background:rgba(12,12,15,0.95);backdrop-filter:blur(12px);border-bottom:0.5px solid rgba(255,255,255,0.07);padding:0 24px;height:52px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#d4a843;display:flex;align-items:center;gap:8px;}
+.ldot{width:7px;height:7px;border-radius:50%;background:#d4a843;animation:pulse 2s ease-in-out infinite;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.spill{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6a6a72;background:#141418;border:0.5px solid rgba(255,255,255,0.07);border-radius:99px;padding:4px 11px;}
+.sdot{width:5px;height:5px;border-radius:50%;}
+.rbtn{background:rgba(212,168,67,0.1);border:0.5px solid rgba(212,168,67,0.25);color:#d4a843;font-size:10px;font-family:'IBM Plex Mono',monospace;padding:5px 14px;border-radius:5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.rbtn:hover{background:rgba(212,168,67,0.2);}
+.rbtn:disabled{opacity:0.35;cursor:not-allowed;}
+.ricon.spin{animation:spin .8s linear infinite;}
+.main{max-width:1280px;margin:0 auto;padding:24px;}
+.ptitle{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:#e0ddd6;margin-bottom:4px;}
+.psub{font-size:10px;color:#4a4a52;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;margin-top:4px;}
+.aibadge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#d4a843;background:rgba(212,168,67,0.08);border:0.5px solid rgba(212,168,67,0.2);border-radius:99px;padding:2px 8px;}
+.aidot{width:4px;height:4px;border-radius:50%;background:#d4a843;animation:pulse 1.5s ease-in-out infinite;}
+.sgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px;}
+@media(max-width:760px){.sgrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:480px){.sgrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.sc{background:#111115;border:0.5px solid rgba(255,255,255,0.07);border-radius:9px;padding:14px 16px;position:relative;overflow:hidden;}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--a,#d4a843);opacity:0.5;}
+.sl{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:#4a4a52;margin-bottom:7px;}
+.sv{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#e0ddd6;line-height:1;}
+.ss{font-size:10px;color:#3a3a42;margin-top:3px;}
+.fbar{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.fl{font-size:10px;color:#3a3a42;font-family:'IBM Plex Mono',monospace;}
+.fc{background:#111115;border:0.5px solid rgba(255,255,255,0.07);border-radius:99px;padding:4px 12px;font-size:11px;font-weight:500;color:#5a5a62;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.fc:hover{color:#a0a09a;border-color:rgba(255,255,255,0.14);}
+.fc.on{background:rgba(212,168,67,0.1);border-color:rgba(212,168,67,0.35);color:#d4a843;}
+.glayout{display:grid;grid-template-columns:1fr 310px;gap:16px;align-items:start;}
+@media(max-width:960px){.glayout{grid-template-columns:1fr;}}
+.panel{background:#111115;border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.panel:last-child{margin-bottom:0;}
+.ph2{padding:12px 18px;border-bottom:0.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;}
+.pt{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:#4a4a52;}
+.pc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#3a3a42;background:#0c0c0f;padding:2px 8px;border-radius:99px;border:0.5px solid rgba(255,255,255,0.06);}
+.tscroll{max-height:620px;overflow-y:auto;}
+.ti{padding:14px 18px;border-bottom:0.5px solid rgba(255,255,255,0.05);transition:background .15s;}
+.ti:last-child{border-bottom:none;}
+.ti:hover{background:#141418;}
+.tih{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.tn{font-size:12px;font-weight:500;color:#d0cdc6;line-height:1.45;flex:1;}
+.ub{flex-shrink:0;font-size:9px;font-weight:500;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:4px;white-space:nowrap;}
+.hot{background:rgba(224,82,82,0.1);color:#e05252;border:0.5px solid rgba(224,82,82,0.2);}
+.nw{background:rgba(82,168,125,0.1);color:#52a87d;border:0.5px solid rgba(82,168,125,0.2);}
+.ex{background:rgba(212,132,60,0.1);color:#d4843c;border:0.5px solid rgba(212,132,60,0.2);}
+.tmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.bprov{font-size:10px;color:#5287c8;background:rgba(82,135,200,0.1);border:0.5px solid rgba(82,135,200,0.18);border-radius:4px;padding:1px 6px;font-family:'IBM Plex Mono',monospace;}
+.reftag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#3a3a42;background:#0c0c0f;padding:1px 5px;border-radius:3px;}
+.ctag{font-size:10px;color:#3a3a42;background:#18181d;padding:1px 6px;border-radius:3px;border:0.5px solid rgba(255,255,255,0.05);}
+.cld{font-family:'IBM Plex Mono',monospace;font-size:10px;}
+.csoon{color:#e05252;font-weight:500;}
+.cok{color:#4a4a52;}
+.cbar{height:2px;background:#1a1a20;border-radius:99px;margin-top:8px;overflow:hidden;}
+.cbf{height:100%;border-radius:99px;}
+.pbar{margin-bottom:10px;}
+.pbn{font-size:11px;color:#6a6a72;margin-bottom:4px;display:flex;justify-content:space-between;}
+.pbt{height:5px;background:#1a1a20;border-radius:99px;overflow:hidden;}
+.pbf{height:100%;border-radius:99px;background:linear-gradient(90deg,#d4a843,#f0c96a);}
+.por{padding:12px 18px;border-bottom:0.5px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:12px;}
+.por:last-child{border-bottom:none;}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pname{font-size:12px;font-weight:500;color:#b0ada6;}
+.pdesc{font-size:10px;color:#3a3a42;}
+.plink{font-size:10px;color:#d4a843;text-decoration:none;opacity:0.6;transition:opacity .2s;white-space:nowrap;}
+.plink:hover{opacity:1;}
+.ci{padding:10px 18px;border-bottom:0.5px solid rgba(255,255,255,0.05);display:flex;align-items:flex-start;gap:10px;}
+.ci:last-child{border-bottom:none;}
+.cb{width:16px;height:16px;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+.cb.done{background:#52a87d;} .cb.todo{border:0.5px solid rgba(255,255,255,0.12);}
+.cb.done svg{display:block;} .cb.todo svg{display:none;}
+.ct{font-size:11px;color:#6a6a72;line-height:1.5;}
+.ct.done{text-decoration:line-through;color:#3a3a42;}
+.live-tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-family:'IBM Plex Mono',monospace;border-radius:99px;padding:1px 7px;margin-left:8px;}
+.err-banner{background:rgba(224,82,82,0.07);border-bottom:0.5px solid rgba(224,82,82,0.12);padding:10px 18px;font-size:11px;color:#c05050;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.footer{text-align:center;padding:32px;font-size:10px;color:#2a2a30;font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="ldot"></div>Tender Radar</div>
+  <span style="font-size:10px;color:#3a3a42;font-family:'IBM Plex Mono',monospace;display:none;" id="subLabel">SA Built Environment</span>
+  <div class="topbar-right">
+    <div class="spill"><div class="sdot" id="sdot" style="background:#3a3a42;"></div><span id="stxt">Loading…</span></div>
+    <button class="rbtn" id="rbtn" onclick="fetchLive()"><span class="ricon" id="ricon">↻</span> Refresh</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="ptitle">Procurement Intelligence</div>
+  <div class="psub">
+    <span id="lu">South Africa · Built Environment</span>
+    <span class="aibadge"><div class="aidot"></div>AI + Live web search</span>
+    <span id="nrl"></span>
+  </div>
+
+  <div class="sgrid">
+    <div class="sc"><div class="sl">Live tenders</div><div class="sv" id="s1">150+</div><div class="ss">Built environment</div></div>
+    <div class="sc" style="--a:#e05252;"><div class="sl">Closing this week</div><div class="sv" id="s2" style="color:#e05252;">8</div><div class="ss">Act fast</div></div>
+    <div class="sc" style="--a:#5287c8;"><div class="sl">Gauteng</div><div class="sv" id="s3">28</div><div class="ss">Open tenders</div></div>
+    <div class="sc" style="--a:#52a87d;"><div class="sl">Arch / Prof</div><div class="sv" id="s4">22</div><div class="ss">Services</div></div>
+    <div class="sc" style="--a:#d4843c;"><div class="sl">Avg days left</div><div class="sv" id="s5">18</div><div class="ss">To close</div></div>
+  </div>
+
+  <div class="fbar">
+    <span class="fl">FILTER:</span>
+    <div class="fc on" onclick="filt(this,'all')">All</div>
+    <div class="fc" onclick="filt(this,'Gauteng')">Gauteng</div>
+    <div class="fc" onclick="filt(this,'North West')">North West</div>
+    <div class="fc" onclick="filt(this,'KwaZulu-Natal')">KZN</div>
+    <div class="fc" onclick="filt(this,'Western Cape')">W. Cape</div>
+    <div class="fc" onclick="filt(this,'arch')">Arch / Prof</div>
+    <div class="fc" onclick="filt(this,'hot')">Closing soon</div>
+  </div>
+
+  <div class="glayout">
+    <div>
+      <div class="panel">
+        <div class="ph2">
+          <span class="pt">Open tenders <span class="live-tag" id="liveTag" style="color:#4a4a72;background:rgba(74,74,114,0.1);border:0.5px solid rgba(74,74,114,0.2);">SEEDED</span></span>
+          <span class="pc" id="tc">— results</span>
+        </div>
+        <div id="errBanner" style="display:none;" class="err-banner">
+          <span id="errMsg"></span>
+          <span onclick="fetchLive()" style="cursor:pointer;color:#d4a843;white-space:nowrap;">Retry ↻</span>
+        </div>
+        <div class="tscroll" id="TL"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="ph2"><span class="pt">Province volume</span></div>
+        <div style="padding:16px 18px;" id="PC"></div>
+      </div>
+      <div class="panel">
+        <div class="ph2"><span class="pt">Key portals</span></div>
+        <div class="por"><div class="pdot" style="background:#5287c8;"></div><div style="flex:1;min-width:0;"><div class="pname">etenders.gov.za</div><div class="pdesc">National Treasury official portal</div></div><a class="plink" href="https://www.etenders.gov.za" target="_blank">Visit ↗</a></div>
+        <div class="por"><div class="pdot" style="background:#52a87d;"></div><div style="flex:1;min-width:0;"><div class="pname">tenderalerts.co.za</div><div class="pdesc">Filtered construction alerts</div></div><a class="plink" href="https://tenderalerts.co.za" target="_blank">Visit ↗</a></div>
+        <div class="por"><div class="pdot" style="background:#d4843c;"></div><div style="flex:1;min-width:0;"><div class="pname">idt.org.za</div><div class="pdesc">Independent Development Trust</div></div><a class="plink" href="https://idt.org.za/cat_doc/advertised-tenders/" target="_blank">Visit ↗</a></div>
+        <div class="por"><div class="pdot" style="background:#d4a843;"></div><div style="flex:1;min-width:0;"><div class="pname">protenders.co.za</div><div class="pdesc">48 000+ live opportunities</div></div><a class="plink" href="https://www.protenders.co.za" target="_blank">Visit ↗</a></div>
+        <div class="por"><div class="pdot" style="background:#555;"></div><div style="flex:1;min-width:0;"><div class="pname">dpw.gov.za</div><div class="pdesc">Dept of Public Works</div></div><a class="plink" href="http://www.publicworks.gov.za/tenders.html" target="_blank">Visit ↗</a></div>
+      </div>
+      <div class="panel">
+        <div class="ph2"><span class="pt">Bid readiness</span></div>
+        <div class="ci"><div class="cb done" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct done">CIDB grading registered</div></div>
+        <div class="ci"><div class="cb done" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct done">SARS tax clearance (valid)</div></div>
+        <div class="ci"><div class="cb done" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct done">CIPC + B-BBEE certificate</div></div>
+        <div class="ci"><div class="cb todo" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct">CSD registration active</div></div>
+        <div class="ci"><div class="cb todo" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct">SACAP / ECSA registration</div></div>
+        <div class="ci"><div class="cb todo" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct">Capability statement ready</div></div>
+        <div class="ci"><div class="cb todo" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct">SBD forms templated (1,4,6.1,8,9)</div></div>
+        <div class="ci"><div class="cb todo" onclick="tck(this)"><svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3,5.5 8,1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div><div class="ct">PII + public liability certs</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">TENDER RADAR &middot; SA BUILT ENVIRONMENT &middot; POWERED BY CLAUDE AI</div>
+
+<script>
+const SEED={
+  summary:{total:150,closing_this_week:8,gauteng_count:28,arch_count:22,avg_days:18},
+  tenders:[
+    {title:"Design and construction of top structure facility — Phase 2 Programme",ref:"RFP/018/2025",province:"Gauteng",closes:"2026-04-24",type:"Design & build",category:"construction",urgency:"new",entity:"Gauteng Housing"},
+    {title:"Appointment of professional consultants — architectural services, Green Manufacturing Hub",ref:"EHC/LDS/2026",province:"Gauteng",closes:"2026-04-15",type:"Architectural services",category:"arch",urgency:"new",entity:"Ekurhuleni"},
+    {title:"Panel of professional civil service providers — Amathole District Municipality, 3-year framework",ref:"8/2/80/2025-2026C",province:"Eastern Cape",closes:"2026-04-16",type:"Professional panel",category:"arch",urgency:"new",entity:"Amathole DM"},
+    {title:"Construction of Kwabhaca Indoor Shooting Range Phase 2",ref:"UMZ/INFRA/C&CS/001",province:"North West",closes:"2026-04-08",type:"Construction",category:"construction",urgency:"hot",entity:"uMzimvubu LM"},
+    {title:"Design and reconstruction (turnkey) — Flamingo Industrial Park Unit 19",ref:"RFP14/25",province:"KwaZulu-Natal",closes:"2026-04-08",type:"Turnkey design & build",category:"construction",urgency:"hot",entity:"KZN IDZ"},
+    {title:"Refurbishment of terminal building — engineering professional services, 22 months",ref:"ARPTS/2026/TRM",province:"Gauteng",closes:"2026-04-20",type:"Engineering services",category:"arch",urgency:"new",entity:"ACSA"},
+    {title:"Framework contract — construction, refurbishment and general building works, Mpumalanga 36 months",ref:"COGHSTA/019/26/MP",province:"Mpumalanga",closes:"2026-03-31",type:"Framework agreement",category:"construction",urgency:"hot",entity:"Mpumalanga CoGHSTA"},
+    {title:"Architect to redesign Agriseta House — approvals and BOQ for full refurbishment",ref:"AGRISETA/2026",province:"Gauteng",closes:"2026-04-12",type:"Architectural services",category:"arch",urgency:"new",entity:"Agriseta"},
+    {title:"Construction of Kwaggafontein Sports, Arts, Culture and Recreational Centre Phase 1",ref:"THLM/SCM10/2025-2026/CDS03",province:"Mpumalanga",closes:"2026-03-24",type:"Construction",category:"construction",urgency:"hot",entity:"Thembisile Hani LM"},
+    {title:"Hammersdale High Level Reservoir Inlet Phase 2 — 2 700m steel inlet main",ref:"32179-5W",province:"KwaZulu-Natal",closes:"2026-03-20",type:"Civil engineering",category:"civil",urgency:"hot",entity:"eThekwini Metro"},
+    {title:"Supply and delivery of ready-mix concrete — Mzimvubu Water Project, 36 months",ref:"DWS22-0226 WTE",province:"Eastern Cape",closes:"2026-03-31",type:"Material supply",category:"supply",urgency:"hot",entity:"DWS"},
+    {title:"Quantity surveying professional services for new government office complex",ref:"DPWI/QS/GP/2026",province:"Gauteng",closes:"2026-04-30",type:"Quantity surveying",category:"arch",urgency:"new",entity:"DPWI Gauteng"},
+    {title:"Cathodic protection infrastructure — pipeline Ndwendwe Reservoir to eNyokeni Booster Pump Station",ref:"34225-5W",province:"KwaZulu-Natal",closes:"2026-03-27",type:"Civil engineering",category:"civil",urgency:"hot",entity:"eThekwini"},
+    {title:"Panel of suppliers — weighbridge supply, installation and maintenance",ref:"BID/18/2025-26",province:"Free State",closes:"2026-04-21",type:"Material supply",category:"supply",urgency:"new",entity:"Mangaung Metro"},
+    {title:"3-year framework — construction of fences and animal handling facilities, Limpopo",ref:"ACDP 23/17",province:"Limpopo",closes:"2026-02-25",type:"Framework agreement",category:"construction",urgency:"ex",entity:"Limpopo DARD"},
+  ],
+  province_counts:{"Gauteng":28,"KwaZulu-Natal":22,"Western Cape":18,"Eastern Cape":14,"Mpumalanga":10,"Limpopo":8,"North West":7,"Free State":6,"Northern Cape":4}
+};
+
+let tenders=[],af='all',refreshTimer=null;
+
+function dl(d){if(!d)return 999;return Math.round((new Date(d)-new Date())/86400000);}
+function fd(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});}catch{return d;}}
+
+function setSt(state,txt){
+  const dot=document.getElementById('sdot'),stxt=document.getElementById('stxt');
+  stxt.textContent=txt;
+  const c={searching:'#d4843c',live:'#52a87d',error:'#e05252',seed:'#4a4a72'}[state]||'#4a4a72';
+  dot.style.background=c;
+  dot.style.animation=state==='live'?'pulse 2s ease-in-out infinite':'none';
+}
+
+function renderProvince(pc){
+  const provs=Object.entries(pc).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(...provs.map(p=>p[1]),1);
+  document.getElementById('PC').innerHTML=provs.map(([n,c])=>`
+    <div class="pbar"><div class="pbn"><span>${n}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;">${c}</span></div>
+    <div class="pbt"><div class="pbf" style="width:${Math.round(c/mx*100)}%;"></div></div></div>`).join('');
+}
+
+function renderStats(s){
+  document.getElementById('s1').textContent=s.total||tenders.length;
+  document.getElementById('s2').textContent=s.closing_this_week||tenders.filter(t=>dl(t.closes)<=7).length;
+  document.getElementById('s3').textContent=s.gauteng_count||tenders.filter(t=>t.province==='Gauteng').length;
+  document.getElementById('s4').textContent=s.arch_count||tenders.filter(t=>t.category==='arch').length;
+  const avs=tenders.map(t=>dl(t.closes)).filter(d=>d>0&&d<999);
+  document.getElementById('s5').textContent=s.avg_days||(avs.length?Math.round(avs.reduce((a,b)=>a+b,0)/avs.length):'—');
+}
+
+function renderTenders(f){
+  let list=[...tenders];
+  if(f==='arch')list=list.filter(t=>t.category==='arch');
+  else if(f==='hot')list=list.filter(t=>dl(t.closes)<=10||t.urgency==='hot');
+  else if(f!=='all')list=list.filter(t=>t.province===f);
+  document.getElementById('tc').textContent=list.length+' result'+(list.length!==1?'s':'');
+  if(!list.length){document.getElementById('TL').innerHTML='<div style="padding:32px;text-align:center;font-size:11px;color:#3a3a42;font-family:IBM Plex Mono,monospace;">No tenders match this filter</div>';return;}
+  document.getElementById('TL').innerHTML=list.map(t=>{
+    const d=dl(t.closes);
+    const bp=Math.max(0,Math.min(100,Math.round((30-d)/30*100)));
+    const bc=d<=5?'#e05252':d<=10?'#d4843c':'#52a87d';
+    const uc=t.urgency==='hot'||d<=10?'hot':t.urgency==='extended'||t.urgency==='ex'?'ex':'nw';
+    const ul=d<=3?d+'d left!':d<=10?'Closing soon':t.urgency==='ex'?'Extended':'Open';
+    return`<div class="ti">
+      <div class="tih"><div class="tn">${t.title}</div><div class="ub ${uc}">${ul}</div></div>
+      <div class="tmeta"><div class="bprov">${t.province}</div>${t.ref?`<span class="reftag">${t.ref}</span>`:''}<span class="ctag">${t.type||t.category}</span>${t.entity?`<span style="font-size:10px;color:#3a3a42;">${t.entity}</span>`:''}</div>
+      <div class="tmeta"><span class="cld ${d<=10?'csoon':'cok'}">Closes ${fd(t.closes)} · ${d>0?d+'d':'today'}</span></div>
+      <div class="cbar"><div class="cbf" style="width:${bp}%;background:${bc};"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function loadSeed(){
+  tenders=SEED.tenders;
+  renderStats(SEED.summary);
+  renderProvince(SEED.province_counts);
+  renderTenders(af);
+  setSt('seed','Seeded data');
+}
+
+async function fetchLive(){
+  setSt('searching','Searching portals…');
+  const rb=document.getElementById('rbtn'),ri=document.getElementById('ricon');
+  rb.disabled=true;ri.classList.add('spin');
+  document.getElementById('errBanner').style.display='none';
+  clearTimeout(refreshTimer);
+
+  try{
+    // Calls your own Netlify function — no CORS issue
+    const res=await fetch('/.netlify/functions/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:3000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:'Search tenderalerts.co.za and etenders.gov.za for currently open South African built environment and construction tenders. Find real tender listings with reference numbers, provinces, and closing dates. Return ONLY a raw JSON object (no markdown, no code fences, no explanation) with this exact structure: {"summary":{"total":number,"closing_this_week":number,"gauteng_count":number,"arch_count":number},"tenders":[{"title":"string","ref":"string","province":"string","closes":"YYYY-MM-DD","type":"string","category":"construction|arch|civil|supply","urgency":"hot|new|extended","entity":"string"}],"province_counts":{"Gauteng":0,"KwaZulu-Natal":0,"Western Cape":0,"Eastern Cape":0,"Mpumalanga":0,"Limpopo":0,"North West":0,"Free State":0,"Northern Cape":0}} Include up to 15 real tenders. Mark urgency hot if closing within 10 days.'}]
+      })
+    });
+
+    if(!res.ok)throw new Error(`Proxy returned HTTP ${res.status}`);
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||data.error);
+
+    const textBlocks=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(!textBlocks)throw new Error('Empty response from AI');
+    const s=textBlocks.indexOf('{'),e=textBlocks.lastIndexOf('}');
+    if(s<0)throw new Error('No JSON in response');
+    const parsed=JSON.parse(textBlocks.slice(s,e+1));
+    if(!parsed.tenders||!parsed.tenders.length)throw new Error('No tenders in response');
+
+    tenders=parsed.tenders;
+    renderStats(parsed.summary||{});
+    if(parsed.province_counts)renderProvince(parsed.province_counts);
+    renderTenders(af);
+
+    const now=new Date();
+    setSt('live','Live · '+now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}));
+    document.getElementById('lu').textContent='Updated '+now.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+    const lt=document.getElementById('liveTag');
+    lt.textContent='LIVE';lt.style.color='#52a87d';lt.style.background='rgba(82,168,125,0.1)';lt.style.borderColor='rgba(82,168,125,0.2)';
+    document.getElementById('nrl').textContent='Next refresh in 30m';
+    refreshTimer=setTimeout(fetchLive,30*60*1000);
+
+  }catch(err){
+    console.error(err);
+    setSt('seed','Seeded — live failed');
+    const eb=document.getElementById('errBanner');
+    document.getElementById('errMsg').textContent='Live fetch failed: '+err.message+' — showing seeded data.';
+    eb.style.display='flex';
+  }finally{rb.disabled=false;ri.classList.remove('spin');}
+}
+
+function filt(el,f){
+  af=f;
+  document.querySelectorAll('.fc').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');renderTenders(f);
+}
+function tck(box){
+  const d=box.classList.contains('done');
+  box.classList.toggle('done',!d);box.classList.toggle('todo',d);
+  box.nextElementSibling.classList.toggle('done',!d);
+}
+
+loadSeed();
+setTimeout(fetchLive,500);
+</script>
+</body>
+</html>
