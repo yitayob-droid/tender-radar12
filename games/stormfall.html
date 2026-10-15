@@ -165,6 +165,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
       <div data-p="wall"><kbd>Z</kbd>Wall</div>
       <div data-p="ramp"><kbd>X</kbd>Ramp</div>
       <div data-p="floor"><kbd>C</kbd>Floor</div>
+      <div><kbd>G</kbd>Edit</div>
     </div>
     <div class="matrow">
       <div class="mat" id="mwood"><i style="background:#c08a52"></i><span id="nwood">0</span></div>
@@ -188,6 +189,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
       <div><span>Open chest, pick up</span><kbd>E</kbd></div>
       <div><span>Build wall / ramp / floor</span><kbd>Z / X / C</kbd></div>
       <div><span>Toggle build mode</span><kbd>Q</kbd></div>
+      <div><span>Edit your piece (door, window, flip ramp)</span><kbd>G</kbd></div>
       <div><span>Wood ↔ stone (build mode)</span><kbd>Right click</kbd></div>
       <div><span>Look without a mouse</span><kbd>Arrow keys</kbd></div>
     </div>
@@ -560,7 +562,7 @@ class Char{
     const wing=mkBox(3.2,.06,1.4,this.color,this.glider);const wstripe=mkBox(3.22,.07,.3,0xffd23f,this.glider);wstripe.position.z=-.3;
     const body=new THREE.Mesh(boxGeo(.95,1.65,.75),HIDDEN);body.position.y=.83;body.userData={char:this,head:false};g.add(body);
     const hd=new THREE.Mesh(boxGeo(.64,.6,.64),HIDDEN);hd.position.y=2.0;hd.userData={char:this,head:true};g.add(hd);
-    this.hit=[body,hd];this.mesh=g;this.rig=rig;g.visible=false;
+    this.hit=[body,hd];solids.push(body,hd);this.mesh=g;this.rig=rig;g.visible=false;
     world.add(g);
   }
   setHeld(){
@@ -684,7 +686,7 @@ function melee(c){
 }
 function applyHit(src,h,dmg,headMult,weap,isMelee){
   const ud=h.object.userData;
-  if(ud.char){const t=ud.char;damageChar(t,dmg*(ud.head?headMult:1),src,weap,ud.head,false);burst(h.point,0xff4060,5);}
+  if(ud.char){const t=ud.char;if(t.isPlayer&&!src.isPlayer)dmg*=.7;damageChar(t,dmg*(ud.head?headMult:1),src,weap,ud.head,false);burst(h.point,0xff4060,5);}
   else if(ud.build){damageBuild(ud.build,dmg);burst(h.point,ud.build.mat==='wood'?0xc08a52:0x9a9ca8,4);}
   else if(ud.res){damageRes(ud.res,dmg,src,isMelee,h.point);burst(h.point,ud.res.type==='tree'?0x8a5a33:0x8b8f96,4);}
   else burst(h.point,0xdddddd,3);
@@ -797,24 +799,62 @@ function tryBuild(c,type){
   if(!mat){if(c.isPlayer)banner('Not enough materials','Harvest trees and rocks with the pickaxe',1.5);return false;}
   c.mats[mat]-=COST;c.built++;
   const max=mat==='wood'?150:300;
-  const m=new THREE.Mesh(boxGeo(1,1,1),new THREE.MeshLambertMaterial({map:mat==='wood'?woodTex:stoneTex}));
-  m.rotation.order='YZX';m.castShadow=true;m.receiveShadow=true;
-  const col=pieceShape(t,m);
-  m.add(new THREE.LineSegments(edgesFor(m.geometry),edgeMat));
-  const piece=Object.assign({},t,{mat,hp:max,max,mesh:m,col,ramp:null});
+  const piece=Object.assign({},t,{mat,hp:max,max,owner:c,edit:0,parts:[],ramp:null,
+    material:new THREE.MeshLambertMaterial({map:mat==='wood'?woodTex:stoneTex})});
   if(t.type==='ramp'){piece.ramp={x0:t.cx*CELL,z0:t.cz*CELL,lvl:t.lvl,dir:t.dir,cx:t.cx,cz:t.cz};ramps.push(piece.ramp);}
-  if(col)colliders.push(col);
-  m.userData.build=piece;world.add(m);m.updateMatrixWorld(true);solids.push(m);builds.set(t.key,piece);
-  m.scale.set(.2,.2,.2);piece.grow=0;
+  makeParts(piece);builds.set(t.key,piece);
+  for(const part of piece.parts)part.m.scale.set(.2,.2,.2);
   fx.push({type:'grow',piece,t:0});
   sfx('build',c.isPlayer?1:volAt(c.pos));
   return true;
 }
+// Edit shapes, as rectangles [u0,u1,v0,v1] in metres across a 4×4 tile.
+// Walls: u runs along the wall, v is height. Floors: u is x, v is z.
+const WALL_EDITS=[
+  {name:'Wall',rects:[[0,4,0,4]]},
+  {name:'Door',rects:[[0,1.4,0,4],[2.6,4,0,4],[1.4,2.6,3,4]]},
+  {name:'Window',rects:[[0,4,0,1.6],[0,4,2.8,4],[0,1.4,1.6,2.8],[2.6,4,1.6,2.8]]},
+  {name:'Half wall',rects:[[0,4,0,2]]}];
+const FLOOR_EDITS=[
+  {name:'Floor',rects:[[0,4,0,4]]},
+  {name:'Floor hatch',rects:[[0,4,0,1],[0,4,3,4],[0,1,1,3],[3,4,1,3]]}];
+function editName(p){return p.type==='wall'?WALL_EDITS[p.edit].name:p.type==='floor'?FLOOR_EDITS[p.edit].name:'Ramp';}
+function clearParts(p){for(const part of p.parts){world.remove(part.m);removeFrom(solids,part.m);if(part.col)removeFrom(colliders,part.col);}p.parts=[];}
+function addPart(p,m,col){
+  m.castShadow=true;m.receiveShadow=true;m.material=p.material;
+  m.add(new THREE.LineSegments(edgesFor(m.geometry),edgeMat));
+  m.userData.build=p;world.add(m);m.updateMatrixWorld(true);solids.push(m);
+  if(col)colliders.push(col);p.parts.push({m,col});
+}
+function makeParts(p){
+  clearParts(p);
+  if(p.type==='ramp'){const m=new THREE.Mesh(boxGeo(1,1,1));m.rotation.order='YZX';pieceShape(p,m);addPart(p,m,null);return;}
+  const rects=(p.type==='wall'?WALL_EDITS:FLOOR_EDITS)[p.edit].rects;
+  for(const [u0,u1,v0,v1] of rects){
+    const su=u1-u0,sv=v1-v0,cu=(u0+u1)/2,cv=(v0+v1)/2;let m,min,max;
+    if(p.type==='floor'){const x=p.cx*CELL+cu,z=p.cz*CELL+cv;m=new THREE.Mesh(boxGeo(su,.3,sv));m.position.set(x,p.lvl-.15,z);
+      min={x:x-su/2,y:p.lvl-.3,z:z-sv/2};max={x:x+su/2,y:p.lvl,z:z+sv/2};}
+    else if(p.axis==='x'){const x=p.e*CELL,z=p.o*CELL+cu,y=p.lvl+cv;m=new THREE.Mesh(boxGeo(.3,sv,su));m.position.set(x,y,z);
+      min={x:x-.15,y:y-sv/2,z:z-su/2};max={x:x+.15,y:y+sv/2,z:z+su/2};}
+    else{const x=p.o*CELL+cu,z=p.e*CELL,y=p.lvl+cv;m=new THREE.Mesh(boxGeo(su,sv,.3));m.position.set(x,y,z);
+      min={x:x-su/2,y:y-sv/2,z:z-.15};max={x:x+su/2,y:y+sv/2,z:z+.15};}
+    addPart(p,m,{min,max});
+  }
+}
+function editPiece(p){
+  if(p.type==='ramp'){p.dir=p.ramp.dir=[1,0,3,2][p.dir];}   // flip the ramp to face the other way
+  else p.edit=(p.edit+1)%(p.type==='wall'?WALL_EDITS:FLOOR_EDITS).length;
+  makeParts(p);sfx('build',.6);
+}
+function aimedPiece(c){
+  const near=aim(c,_o,_d);const h=firstHit(c,_o,_d,near,near+9);
+  const p=h&&h.object.userData.build;return p&&p.owner===c?p:null;
+}
 function damageBuild(p,dmg){
   if(p.dead)return;p.hp-=dmg;
-  const k=.4+.6*Math.max(0,p.hp)/p.max;p.mesh.material.color.setRGB(k,k*.95,k*.92);
-  if(p.hp<=0){p.dead=true;world.remove(p.mesh);removeFrom(solids,p.mesh);if(p.col)removeFrom(colliders,p.col);if(p.ramp)removeFrom(ramps,p.ramp);builds.delete(p.key);
-    burst(p.mesh.position,p.mat==='wood'?0xc08a52:0x9a9ca8,10);sfx('break',volAt(p.mesh.position));}
+  const k=.4+.6*Math.max(0,p.hp)/p.max;p.material.color.setRGB(k,k*.95,k*.92);
+  if(p.hp<=0){p.dead=true;const at=p.parts[0].m.position.clone();clearParts(p);if(p.ramp)removeFrom(ramps,p.ramp);builds.delete(p.key);
+    burst(at,p.mat==='wood'?0xc08a52:0x9a9ca8,10);sfx('break',volAt(at));}
 }
 
 /* ================= effects ================= */
@@ -829,7 +869,7 @@ function tracer(a,b){
 }
 function updateFx(dt){
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];
-    if(f.type==='grow'){f.t+=dt*7;const s=Math.min(1,.2+f.t);f.piece.mesh.scale.set(s,s,s);if(s>=1)fx.splice(i,1);continue;}
+    if(f.type==='grow'){f.t+=dt*7;const s=Math.min(1,.2+f.t);for(const part of f.piece.parts)part.m.scale.set(s,s,s);if(s>=1)fx.splice(i,1);continue;}
     f.t-=dt;
     if(f.type==='p'){f.v.y-=20*dt;f.m.position.addScaledVector(f.v,dt);}
     else if(f.type==='tr'){f.m.material.opacity=Math.max(0,f.t/.07);}
@@ -1100,7 +1140,8 @@ function updateHUD(dt){
   $('stormtint').style.opacity=stormFogK;
   // prompt
   let pr='';
-  if(p.alive&&p.state==='ground'){const n=nearestInteract();if(n)pr=n.chest?'<kbd>E</kbd>Open chest':`<kbd>E</kbd>${itemName(n.pickup.item)}`;}
+  if(p.alive&&p.state==='ground'){const n=nearestInteract();if(n)pr=n.chest?'<kbd>E</kbd>Open chest':`<kbd>E</kbd>${itemName(n.pickup.item)}`;
+    else if(p.built>0){const pc=aimedPiece(p);if(pc)pr=`<kbd>G</kbd>Edit ${editName(pc).toLowerCase()}`;}}
   if($('prompt').innerHTML!==pr)$('prompt').innerHTML=pr;
   // use bar
   if(p.using){$('usebar').hidden=false;$('usename').textContent=HEALS[p.using.item.id].name;$('usefill').style.width=(1-p.using.t/p.using.total)*100+'%';}
@@ -1201,6 +1242,7 @@ addEventListener('keydown',e=>{
     case 'KeyX':setBuild('ramp');break;
     case 'KeyC':setBuild('floor');break;
     case 'KeyQ':if(buildPiece)buildPiece=null;else setBuild(lastPiece);break;
+    case 'KeyG':{if(player.state!=='ground')break;const pc=aimedPiece(player);if(pc)editPiece(pc);else banner('Nothing to edit','Aim at a piece you built, then press G',1.4);break;}
     case 'KeyE':interact();break;
     case 'KeyR':if(!buildPiece)startReload(player);break;
     case 'Space':if(player.state==='barge')jumpOut(player);break;
