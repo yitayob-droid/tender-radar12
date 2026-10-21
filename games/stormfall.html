@@ -189,7 +189,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
       <div><span>Open chest, pick up</span><kbd>E</kbd></div>
       <div><span>Build wall / ramp / floor</span><kbd>Z / X / C</kbd></div>
       <div><span>Toggle build mode</span><kbd>Q</kbd></div>
-      <div><span>Edit your piece (door, window, flip ramp)</span><kbd>G</kbd></div>
+      <div><span>Edit: aim at your piece, G, click tiles, G</span><kbd>G or F</kbd></div>
       <div><span>Wood ↔ stone (build mode)</span><kbd>Right click</kbd></div>
       <div><span>Look without a mouse</span><kbd>Arrow keys</kbd></div>
     </div>
@@ -808,17 +808,10 @@ function tryBuild(c,type){
   sfx('build',c.isPlayer?1:volAt(c.pos));
   return true;
 }
-// Edit shapes, as rectangles [u0,u1,v0,v1] in metres across a 4×4 tile.
-// Walls: u runs along the wall, v is height. Floors: u is x, v is z.
-const WALL_EDITS=[
-  {name:'Wall',rects:[[0,4,0,4]]},
-  {name:'Door',rects:[[0,1.4,0,4],[2.6,4,0,4],[1.4,2.6,3,4]]},
-  {name:'Window',rects:[[0,4,0,1.6],[0,4,2.8,4],[0,1.4,1.6,2.8],[2.6,4,1.6,2.8]]},
-  {name:'Half wall',rects:[[0,4,0,2]]}];
-const FLOOR_EDITS=[
-  {name:'Floor',rects:[[0,4,0,4]]},
-  {name:'Floor hatch',rects:[[0,4,0,1],[0,4,3,4],[0,1,1,3],[3,4,1,3]]}];
-function editName(p){return p.type==='wall'?WALL_EDITS[p.edit].name:p.type==='floor'?FLOOR_EDITS[p.edit].name:'Ramp';}
+// Edit grid: walls are 3×3 tiles, floors 2×2. Tile index = row*N + col, where for walls
+// col runs along the wall and row is height; for floors col is x and row is z.
+const gridN=p=>p.type==='wall'?3:2;
+const editName=p=>p.type;
 function clearParts(p){for(const part of p.parts){world.remove(part.m);removeFrom(solids,part.m);if(part.col)removeFrom(colliders,part.col);}p.parts=[];}
 function addPart(p,m,col){
   m.castShadow=true;m.receiveShadow=true;m.material=p.material;
@@ -829,9 +822,10 @@ function addPart(p,m,col){
 function makeParts(p){
   clearParts(p);
   if(p.type==='ramp'){const m=new THREE.Mesh(boxGeo(1,1,1));m.rotation.order='YZX';pieceShape(p,m);addPart(p,m,null);return;}
-  const rects=(p.type==='wall'?WALL_EDITS:FLOOR_EDITS)[p.edit].rects;
-  for(const [u0,u1,v0,v1] of rects){
-    const su=u1-u0,sv=v1-v0,cu=(u0+u1)/2,cv=(v0+v1)/2;let m,min,max;
+  const N=gridN(p),c=CELL/N,removed=p.removed||[];
+  for(let k=0;k<N*N;k++){
+    if(removed.includes(k))continue;
+    const su=c,sv=c,cu=(k%N+.5)*c,cv=(Math.floor(k/N)+.5)*c;let m,min,max;
     if(p.type==='floor'){const x=p.cx*CELL+cu,z=p.cz*CELL+cv;m=new THREE.Mesh(boxGeo(su,.3,sv));m.position.set(x,p.lvl-.15,z);
       min={x:x-su/2,y:p.lvl-.3,z:z-sv/2};max={x:x+su/2,y:p.lvl,z:z+sv/2};}
     else if(p.axis==='x'){const x=p.e*CELL,z=p.o*CELL+cu,y=p.lvl+cv;m=new THREE.Mesh(boxGeo(.3,sv,su));m.position.set(x,y,z);
@@ -841,14 +835,54 @@ function makeParts(p){
     addPart(p,m,{min,max});
   }
 }
-function editPiece(p){
-  if(p.type==='ramp'){p.dir=p.ramp.dir=[1,0,3,2][p.dir];}   // flip the ramp to face the other way
-  else p.edit=(p.edit+1)%(p.type==='wall'?WALL_EDITS:FLOOR_EDITS).length;
-  makeParts(p);sfx('build',.6);
-}
 function aimedPiece(c){
-  const near=aim(c,_o,_d);const h=firstHit(c,_o,_d,near,near+9);
+  const near=aim(c,_o,_d);const h=firstHit(c,_o,_d,near*.6,near+10);
   const p=h&&h.object.userData.build;return p&&p.owner===c?p:null;
+}
+/* ---- edit mode: G opens a tile grid on your piece, click/drag to cut tiles, G confirms ---- */
+let editing=null; // {piece, sel:Set, hover, drag, tiles:[mesh]}
+const tileMats={keep:new THREE.MeshBasicMaterial({color:0x4fc3ff,transparent:true,opacity:.28,side:THREE.DoubleSide,depthTest:false}),
+  cut:new THREE.MeshBasicMaterial({color:0x0b1a33,transparent:true,opacity:.75,side:THREE.DoubleSide,depthTest:false}),
+  hover:new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,side:THREE.DoubleSide,depthTest:false}),
+  hoverCut:new THREE.MeshBasicMaterial({color:0x3a6fb0,transparent:true,opacity:.8,side:THREE.DoubleSide,depthTest:false})};
+function tileCenter(p,k,out){
+  const N=gridN(p),c=CELL/N,u=(k%N+.5)*c,v=(Math.floor(k/N)+.5)*c;
+  if(p.type==='floor')return out.set(p.cx*CELL+u,p.lvl+.05,p.cz*CELL+v);
+  if(p.axis==='x')return out.set(p.e*CELL,p.lvl+v,p.o*CELL+u);
+  return out.set(p.o*CELL+u,p.lvl+v,p.e*CELL);
+}
+function startEdit(p){
+  if(p.type==='ramp'){p.dir=p.ramp.dir=[1,0,3,2][p.dir];makeParts(p);sfx('build',.6);banner('Ramp flipped','',1);return;}
+  const N=gridN(p),c=CELL/N,g=new THREE.PlaneGeometry(c*.9,c*.9);
+  editing={piece:p,sel:new Set(p.removed||[]),hover:-1,drag:null,tiles:[]};
+  for(let k=0;k<N*N;k++){const m=new THREE.Mesh(g,tileMats.keep);m.renderOrder=10;tileCenter(p,k,m.position);
+    if(p.type==='floor')m.rotation.x=-Math.PI/2;else if(p.axis==='x')m.rotation.y=Math.PI/2;
+    world.add(m);editing.tiles.push(m);}
+  buildPiece=null;player.using=null;player.reloading=0;
+}
+function endEdit(confirm){
+  if(!editing)return;const p=editing.piece;
+  for(const m of editing.tiles)world.remove(m);
+  if(confirm&&!p.dead){const N=gridN(p),cut=[...editing.sel];
+    if(cut.length>=N*N)banner('Keep at least one tile','The edit was cancelled',1.5);
+    else{p.removed=cut;makeParts(p);sfx('build',.6);}}
+  editing=null;
+}
+function updateEdit(){
+  const e=editing,p=e.piece;
+  if(p.dead||!player.alive||player.state!=='ground'||player.pos.distanceTo(tileCenter(p,0,tmpA))>12){endEdit(false);return;}
+  // which tile is under the crosshair: intersect the camera ray with the piece's plane
+  aim(player,_o,_d);let u=-1,v=-1,t;
+  if(p.type==='floor'){t=(p.lvl-_o.y)/_d.y;if(t>0){u=_o.x+_d.x*t-p.cx*CELL;v=_o.z+_d.z*t-p.cz*CELL;}}
+  else if(p.axis==='x'){t=(p.e*CELL-_o.x)/_d.x;if(t>0){u=_o.z+_d.z*t-p.o*CELL;v=_o.y+_d.y*t-p.lvl;}}
+  else{t=(p.e*CELL-_o.z)/_d.z;if(t>0){u=_o.x+_d.x*t-p.o*CELL;v=_o.y+_d.y*t-p.lvl;}}
+  const N=gridN(p),c=CELL/N;
+  e.hover=(t>0&&t<30&&u>=0&&u<CELL&&v>=0&&v<CELL)?Math.floor(v/c)*N+Math.floor(u/c):-1;
+  if(mouse.clicked&&e.hover>=0)e.drag=!e.sel.has(e.hover);
+  if(!mouse.l)e.drag=null;
+  if(e.drag!==null&&e.hover>=0){if(e.drag)e.sel.add(e.hover);else e.sel.delete(e.hover);}
+  mouse.clicked=false;
+  e.tiles.forEach((m,k)=>{const cut=e.sel.has(k);m.material=k===e.hover?(cut?tileMats.hoverCut:tileMats.hover):(cut?tileMats.cut:tileMats.keep);});
 }
 function damageBuild(p,dmg){
   if(p.dead)return;p.hp-=dmg;
@@ -1028,6 +1062,7 @@ function updatePlayer(dt){
   physics(p,dt);
   // actions
   buildCd-=dt;
+  if(editing){updateEdit();return;}
   if(buildPiece){if(mouse.l&&buildCd<=0&&tryBuild(player,buildPiece))buildCd=.12;}
   else if(it){const auto=it.kind==='pick'||(it.kind==='gun'&&GUNS[it.id].auto);if(mouse.l&&(auto||mouse.clicked))tryFire(p);}
   mouse.clicked=false;
@@ -1126,7 +1161,8 @@ function updateHUD(dt){
       return `<div class="slot${i===p.sel&&!buildPiece?' sel':''}" style="--rc:${col}"><span class="k">${i+1}</span><b>${name}</b><small>${sub}</small></div>`;}).join('');}
   const it=p.slots[p.sel];
   let ammoHTML='';
-  if(buildPiece)ammoHTML=`${buildPiece.toUpperCase()}<small>${p.buildMat} · 10 per piece</small>`;
+  if(editing)ammoHTML=`EDITING ${editing.piece.type.toUpperCase()}<small>click or drag tiles to cut · G confirm · R reset · right-click cancel</small>`;
+  else if(buildPiece)ammoHTML=`${buildPiece.toUpperCase()}<small>${p.buildMat} · 10 per piece</small>`;
   else if(it&&it.kind==='gun'){const G=GUNS[it.id];ammoHTML=p.reloading>0?'Reloading…':`${it.mag}<small>/ ${p.ammo[G.ammo]} ${G.name}</small>`;}
   else if(it&&it.kind==='heal')ammoHTML=`${HEALS[it.id].name}<small>click to use</small>`;
   if($('ammo').innerHTML!==ammoHTML)$('ammo').innerHTML=ammoHTML;
@@ -1141,7 +1177,7 @@ function updateHUD(dt){
   // prompt
   let pr='';
   if(p.alive&&p.state==='ground'){const n=nearestInteract();if(n)pr=n.chest?'<kbd>E</kbd>Open chest':`<kbd>E</kbd>${itemName(n.pickup.item)}`;
-    else if(p.built>0){const pc=aimedPiece(p);if(pc)pr=`<kbd>G</kbd>Edit ${editName(pc).toLowerCase()}`;}}
+    else if(p.built>0&&!editing){const pc=aimedPiece(p);if(pc)pr=`<kbd>G</kbd>Edit ${editName(pc)}`;}}
   if($('prompt').innerHTML!==pr)$('prompt').innerHTML=pr;
   // use bar
   if(p.using){$('usebar').hidden=false;$('usename').textContent=HEALS[p.using.item.id].name;$('usefill').style.width=(1-p.using.t/p.using.total)*100+'%';}
@@ -1168,7 +1204,7 @@ function updateGhost(){
 function clearWorld(){
   if(world)scene.remove(world);
   for(const a of [solids,colliders,ramps,resources,chests,pickups,chars,fx])a.length=0;
-  builds.clear();for(const f of floaters)f.el.remove();floaters.length=0;$('feed').innerHTML='';
+  builds.clear();editing=null;for(const f of floaters)f.el.remove();floaters.length=0;$('feed').innerHTML='';
 }
 function newMatch(){
   clearWorld();makeWorld();
@@ -1223,7 +1259,7 @@ canvas.addEventListener('mousedown',e=>{
   if(lockOK&&document.pointerLockElement!==canvas){lock();return;}
   if(!lockOK&&!document.pointerLockElement)lock();
   if(e.button===0){mouse.l=true;mouse.clicked=true;}
-  if(e.button===2){mouse.r=true;if(buildPiece)player.buildMat=player.buildMat==='wood'?'stone':'wood';}
+  if(e.button===2){mouse.r=true;if(editing)endEdit(false);else if(buildPiece)player.buildMat=player.buildMat==='wood'?'stone':'wood';}
 });
 addEventListener('mouseup',e=>{if(e.button===0)mouse.l=false;if(e.button===2)mouse.r=false;});
 addEventListener('contextmenu',e=>e.preventDefault());
@@ -1236,15 +1272,17 @@ addEventListener('keydown',e=>{
   if(e.repeat||paused||!player.alive)return;
   initAudio();
   const m=/^Digit([1-5])$/.exec(e.code);
+  if(editing&&!['KeyG','KeyF','KeyR'].includes(e.code)&&/^(Digit|Key[ZXCQ])/.test(e.code))endEdit(true);
   if(m){buildPiece=null;selectSlot(player,+m[1]-1);return;}
   switch(e.code){
     case 'KeyZ':setBuild('wall');break;
     case 'KeyX':setBuild('ramp');break;
     case 'KeyC':setBuild('floor');break;
     case 'KeyQ':if(buildPiece)buildPiece=null;else setBuild(lastPiece);break;
-    case 'KeyG':{if(player.state!=='ground')break;const pc=aimedPiece(player);if(pc)editPiece(pc);else banner('Nothing to edit','Aim at a piece you built, then press G',1.4);break;}
+    case 'KeyG':case 'KeyF':{if(editing){endEdit(true);break;}if(player.state!=='ground')break;
+      const pc=aimedPiece(player);if(pc)startEdit(pc);else banner('Nothing to edit','Aim at a wall, floor or ramp you built, then press G',1.6);break;}
     case 'KeyE':interact();break;
-    case 'KeyR':if(!buildPiece)startReload(player);break;
+    case 'KeyR':if(editing)editing.sel.clear();else if(!buildPiece)startReload(player);break;
     case 'Space':if(player.state==='barge')jumpOut(player);break;
   }
 });
