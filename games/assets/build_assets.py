@@ -53,6 +53,7 @@ ADD = {
     "cone": bpy.ops.mesh.primitive_cone_add,
     "ico": bpy.ops.mesh.primitive_ico_sphere_add,
     "uv": bpy.ops.mesh.primitive_uv_sphere_add,
+    "torus": bpy.ops.mesh.primitive_torus_add,
 }
 
 
@@ -169,70 +170,187 @@ GONDOLA = mat("Gondola", 0x2B2340)
 WINDOW = mat("Window", 0x9FE3FF, 0.2)
 
 # ---------------------------------------------------------------- character
-# Feet at z=0, facing +Y, roughly 2.25 m tall to the top of the cap.
+# Feet at z=0, facing +Y, roughly 2.25 m tall. Skins are a base body plus
+# accessories (Hat_*, Acc_*) the game mixes and recolours per skin.
+HAIR = mat("Hair", 0x3B2A1E)
+IRIS = mat("Iris", 0x4A7FC0)
+MOUTH = mat("Mouth", 0x7A2E2E)
+HATMAIN = mat("HatMain", 0xFF7A1A)
+HATACC = mat("HatAccent", 0xFFD23F)
+VISOR = mat("Visor", 0x2FE0C8, 0.1)
+GLOW = mat("Glow", 0xFFC53A)
+BUBBLE = mat("Bubble", 0xBFE8FF, 0.05)
+SCARF = mat("Scarf", 0xD84A4A)
+CAPE = mat("Cape", 0x8A1F2B)
 
 
 def torso():
     t = box((0.6, 0.34, 0.66), (0, 0, 1.24), SUIT)
-    for v in t.data.vertices:  # broaden the shoulders
+    for v in t.data.vertices:  # broaden the shoulders, nip the waist
         if v.co.z > 0:
             v.co.x *= 1.16
             v.co.y *= 1.05
-    bevel(t, 0.07, 3)
+        else:
+            v.co.x *= 0.94
+    bevel(t, 0.08, 3)
     shade(t, True)
     parts = [t]
-    parts.append(bevel(box((0.56, 0.32, 0.2), (0, 0, 0.82), PANTS), 0.05, 2))  # hips
-    parts.append(bevel(box((0.64, 0.38, 0.09), (0, 0, 0.92), DARK), 0.02))  # belt
-    parts.append(bevel(box((0.12, 0.03, 0.08), (0, 0.2, 0.92), ACCENT), 0.01))  # buckle
-    parts.append(rod(0.075, 0.025, (0.13, 0.18, 1.38), ACCENT, "y", 16))  # chest badge
-    pack = bevel(box((0.46, 0.2, 0.52), (0, -0.27, 1.25), DARK), 0.06, 3)
-    parts.append(shade(pack, True))
-    parts.append(bevel(box((0.36, 0.06, 0.2), (0, -0.39, 1.14), ACCENT), 0.02))  # pack pocket
-    for x in (-0.16, 0.16):  # straps
-        parts.append(box((0.06, 0.03, 0.5), (x, 0.185, 1.3), DARK))
-    parts.append(rod(0.15, 0.08, (0, 0, 1.6), DARK, "z", 16))  # collar
+    hips = bevel(box((0.56, 0.32, 0.2), (0, 0, 0.82), PANTS), 0.06, 3)
+    parts.append(shade(hips, True))
+    parts.append(bevel(box((0.6, 0.36, 0.08), (0, 0, 0.93), DARK), 0.025))  # belt
+    parts.append(bevel(box((0.12, 0.03, 0.08), (0, 0.19, 0.93), ACCENT), 0.012))  # buckle
+    parts.append(box((0.025, 0.02, 0.62), (0, 0.183, 1.26), ACCENT))  # zip
+    parts.append(box((0.05, 0.03, 0.06), (0, 0.19, 1.52), ACCENT))  # zip pull
+    for x in (-0.16, 0.16):
+        parts.append(bevel(box((0.14, 0.025, 0.11), (x, 0.178, 1.07), DARK), 0.01))  # pockets
+    parts.append(rod(0.075, 0.025, (0.15, 0.18, 1.4), ACCENT, "y", 16))  # chest badge
+    collar = prim("cyl", loc=(0, 0, 1.6), m=SUIT, radius=0.17, depth=0.1, vertices=20)
+    parts.append(shade(bevel(collar, 0.03, 2), True))
     return join(parts, "Torso")
 
 
 def head():
-    parts = [rod(0.09, 0.14, (0, 0, 1.67), SKIN, "z", 12)]
+    parts = [shade(rod(0.09, 0.14, (0, 0, 1.67), SKIN, "z", 14), True)]
     h = box((0.5, 0.48, 0.52), (0, 0, 1.93), SKIN)
     subsurf(h, 2)
     parts.append(shade(h, True))
-    for x in (-0.095, 0.095):
-        parts.append(shade(prim("uv", loc=(x, 0.205, 1.95), m=WHITE, radius=0.05, segments=12, ring_count=8), True))
-        parts.append(shade(prim("uv", loc=(x, 0.24, 1.95), m=EYE, radius=0.028, segments=10, ring_count=6), True))
-        parts.append(box((0.09, 0.02, 0.022), (x, 0.225, 2.02), DARK, rot=(0, -0.15 if x < 0 else 0.15, 0)))  # brows
-        parts.append(shade(prim("uv", loc=(x * 2.6, 0, 1.93), m=SKIN, radius=0.06, segments=10, ring_count=6), True))  # ears
-    parts.append(box((0.1, 0.02, 0.02), (0, 0.235, 1.83), DARK))  # mouth
-    cap = prim("uv", loc=(0, -0.01, 2.04), scale=(1, 1, 0.72), m=SUIT, radius=0.285, segments=20, ring_count=10)
-    keep(cap, lambda c: c.z > 2.02)
-    parts.append(shade(cap, True))
-    parts.append(bevel(box((0.4, 0.22, 0.035), (0, 0.24, 2.04), SUIT, rot=(-0.12, 0, 0)), 0.012))  # brim
-    parts.append(rod(0.04, 0.02, (0, 0, 2.245), ACCENT, "z", 10))  # button on top
+    for x in (-0.092, 0.092):
+        parts.append(shade(prim("uv", loc=(x, 0.2, 1.95), scale=(1, 0.7, 1.15), m=WHITE, radius=0.055, segments=14, ring_count=10), True))
+        parts.append(shade(prim("uv", loc=(x, 0.232, 1.95), m=IRIS, radius=0.032, segments=12, ring_count=8), True))
+        parts.append(shade(prim("uv", loc=(x, 0.252, 1.95), m=EYE, radius=0.017, segments=10, ring_count=6), True))
+        parts.append(shade(prim("uv", loc=(x + (0.012 if x > 0 else -0.012), 0.262, 1.962), m=WHITE, radius=0.007, segments=6, ring_count=4), True))
+        brow = box((0.1, 0.025, 0.024), (x, 0.222, 2.03), HAIR, rot=(0, -0.18 if x < 0 else 0.18, 0))
+        parts.append(bevel(brow, 0.008))
+        parts.append(shade(prim("uv", loc=(x * 2.65, 0, 1.93), scale=(0.6, 1, 1), m=SKIN, radius=0.07, segments=10, ring_count=8), True))  # ears
+    parts.append(shade(prim("uv", loc=(0, 0.245, 1.89), scale=(0.8, 1, 1), m=SKIN, radius=0.035, segments=10, ring_count=8), True))  # nose
+    mouth = box((0.11, 0.02, 0.025), (0, 0.232, 1.82), MOUTH)
+    parts.append(bevel(mouth, 0.01))
+    # short hair: a skull cap that leaves the forehead clear, plus a fringe
+    hair = prim("uv", loc=(0, -0.01, 1.96), scale=(1.0, 1.03, 0.82), m=HAIR, radius=0.27, segments=20, ring_count=12)
+    keep(hair, lambda c: c.z > 1.98 and not (c.y > 0.17 and c.z < 2.07))
+    parts.append(shade(hair, True))
+    for x in (-0.08, 0.0, 0.08):
+        tuft = prim("cone", loc=(x, 0.17, 2.11), rot=(1.2, 0, x * 2), m=HAIR, radius1=0.06, radius2=0, depth=0.14, vertices=8)
+        parts.append(shade(tuft, True))
     return join(parts, "Head")
 
 
 def arm(side):
     x = 0.44 * side
-    parts = [shade(prim("uv", loc=(x, 0, 1.56), m=SUIT, radius=0.13, segments=14, ring_count=8), True)]
-    parts.append(shade(rod(0.092, 0.38, (x, 0, 1.38), SUIT, "z", 12), True))
-    parts.append(shade(rod(0.08, 0.06, (x, 0, 1.18), ACCENT, "z", 12), True))  # cuff
-    parts.append(shade(rod(0.075, 0.28, (x, 0, 1.02), SKIN, "z", 12), True))
-    hand = box((0.14, 0.15, 0.15), (x, 0.01, 0.84), GLOVE)
-    subsurf(hand, 1)
+    parts = [shade(prim("uv", loc=(x, 0, 1.56), m=SUIT, radius=0.13, segments=16, ring_count=10), True)]
+    parts.append(shade(rod(0.092, 0.38, (x, 0, 1.38), SUIT, "z", 14), True))
+    parts.append(shade(rod(0.084, 0.06, (x, 0, 1.18), ACCENT, "z", 14), True))  # cuff
+    parts.append(shade(rod(0.074, 0.28, (x, 0, 1.02), SKIN, "z", 14), True))
+    hand = box((0.13, 0.16, 0.16), (x, 0.01, 0.84), GLOVE)
+    subsurf(hand, 2)
     parts.append(shade(hand, True))
+    thumb = prim("uv", loc=(x - 0.07 * side, 0.06, 0.87), scale=(0.7, 0.7, 1.3), m=GLOVE, radius=0.04, segments=10, ring_count=6)
+    parts.append(shade(thumb, True))
     return join(parts, "ArmL" if side < 0 else "ArmR", origin=(x, 0, 1.56))
 
 
 def leg(side):
     x = 0.16 * side
-    parts = [shade(rod(0.13, 0.42, (x, 0, 0.62), PANTS, "z", 12), True)]
-    parts.append(shade(rod(0.115, 0.36, (x, 0, 0.3), PANTS, "z", 12), True))
-    parts.append(bevel(box((0.17, 0.06, 0.14), (x, 0.1, 0.45), DARK), 0.02))  # knee pad
-    parts.append(shade(bevel(box((0.22, 0.34, 0.16), (x, 0.05, 0.08), BOOT), 0.05, 3), True))
-    parts.append(box((0.23, 0.35, 0.03), (x, 0.05, 0.015), DARK))  # sole
+    parts = [shade(rod(0.13, 0.42, (x, 0, 0.62), PANTS, "z", 14), True)]
+    parts.append(shade(rod(0.115, 0.36, (x, 0, 0.3), PANTS, "z", 14), True))
+    parts.append(shade(bevel(box((0.17, 0.07, 0.15), (x, 0.1, 0.45), ACCENT), 0.03, 2), True))  # knee pad
+    parts.append(shade(bevel(box((0.22, 0.34, 0.17), (x, 0.05, 0.085), BOOT), 0.06, 3), True))
+    parts.append(box((0.23, 0.36, 0.035), (x, 0.05, 0.017), DARK))  # sole
+    for z in (0.12, 0.16):  # laces
+        parts.append(box((0.1, 0.02, 0.015), (x, 0.205, z), WHITE))
     return join(parts, "LegL" if side < 0 else "LegR", origin=(x, 0, 0.8))
+
+
+def accessories():
+    # caps and hats sit over the hair; all are modelled in place on the body
+    cap = prim("uv", loc=(0, -0.01, 2.04), scale=(1, 1, 0.72), m=HATMAIN, radius=0.29, segments=22, ring_count=12)
+    keep(cap, lambda c: c.z > 2.02)
+    join([shade(cap, True),
+          bevel(box((0.4, 0.24, 0.035), (0, 0.25, 2.04), HATMAIN, rot=(-0.12, 0, 0)), 0.012),
+          rod(0.04, 0.02, (0, 0, 2.25), HATACC, "z", 10)], "Hat_Cap")
+
+    bean = prim("uv", loc=(0, 0, 2.0), scale=(1, 1, 0.95), m=HATMAIN, radius=0.295, segments=22, ring_count=12)
+    keep(bean, lambda c: c.z > 1.985)
+    join([shade(bean, True),
+          shade(prim("cyl", loc=(0, 0, 2.02), m=HATACC, radius=0.3, depth=0.09, vertices=22), True),
+          shade(prim("uv", loc=(0, 0, 2.31), m=HATACC, radius=0.085, segments=12, ring_count=8), True)], "Hat_Beanie")
+
+    helm = prim("uv", loc=(0, 0, 1.97), scale=(1, 1.06, 0.98), m=HATMAIN, radius=0.335, segments=22, ring_count=14)
+    keep(helm, lambda c: c.z > 1.9 and not (c.y > 0.15 and c.z < 2.08))
+    visor = prim("uv", loc=(0, 0.005, 1.97), m=VISOR, radius=0.33, segments=22, ring_count=14)
+    keep(visor, lambda c: c.y > 0.14 and 1.88 < c.z < 2.08)
+    ears = [prim("cyl", loc=(s * 0.33, 0, 1.95), rot=(0, math.pi / 2, 0), m=HATACC, radius=0.095, depth=0.07, vertices=14) for s in (-1, 1)]
+    join([shade(helm, True), shade(visor, True)] + [shade(e, True) for e in ears], "Hat_Helmet")
+
+    spikes = []
+    random.seed(21)
+    for k in range(11):
+        a = k / 11 * 2 * math.pi
+        r = 0.12 if k % 2 else 0.18
+        x, y = math.cos(a) * r, math.sin(a) * r - 0.03
+        c = prim("cone", loc=(x, y, 2.17), rot=(-y * 2.2, x * 2.2, 0), m=HATMAIN, radius1=0.085, radius2=0, depth=random.uniform(0.26, 0.36), vertices=8)
+        spikes.append(shade(c, True))
+    spikes.append(shade(prim("uv", loc=(0, -0.01, 2.06), scale=(1, 1.02, 0.7), m=HATMAIN, radius=0.28, segments=18, ring_count=10), True))
+    spikes.append(bevel(box((0.44, 0.04, 0.085), (0, 0.255, 1.96), VISOR), 0.02))  # shades
+    join(spikes, "Hat_Spiky")
+
+    k_main = shade(prim("cyl", loc=(0, 0, 1.98), m=HATMAIN, radius=0.3, depth=0.5, vertices=20), True)
+    dome = prim("uv", loc=(0, 0, 2.23), m=HATMAIN, radius=0.3, segments=20, ring_count=12)
+    keep(dome, lambda c: c.z >= 2.229)
+    plume = [shade(prim("uv", loc=(0, -0.05 - i * 0.07, 2.52 - i * 0.05), scale=(0.35, 1, 1), m=HATACC, radius=0.11, segments=10, ring_count=6), True) for i in range(5)]
+    join([k_main, shade(dome, True), box((0.36, 0.03, 0.045), (0, 0.3, 1.99), EYE), box((0.04, 0.03, 0.2), (0, 0.3, 1.9), EYE)] + plume, "Hat_Knight")
+
+    pk = prim("uv", loc=(0, 0, 1.95), m=HATMAIN, radius=0.31, segments=32, ring_count=16)
+    for v in pk.data.vertices:  # pumpkin ribs
+        a = math.atan2(v.co.y, v.co.x)
+        f = 1 + 0.07 * math.cos(8 * a)
+        v.co.x *= 1.15 * f
+        v.co.y *= 1.1 * f
+        v.co.z *= 0.88
+    face = [shade(pk, True), shade(rod(0.04, 0.16, (0, 0, 2.27), HATACC, "z", 8), True)]
+    for x in (-0.11, 0.11):
+        face.append(prism("eye", [(x - 0.06, 0.33, 1.97), (x + 0.06, 0.33, 1.97), (x, 0.33, 2.07)], (0, 1, 0), 0.04, GLOW))
+    face.append(prism("mouth", [(-0.15, 0.33, 1.87), (-0.08, 0.33, 1.82), (0, 0.33, 1.86), (0.08, 0.33, 1.82), (0.15, 0.33, 1.87), (0, 0.33, 1.78)], (0, 1, 0), 0.04, GLOW))
+    join(face, "Hat_Pumpkin")
+
+    join([shade(prim("uv", loc=(0, 0, 1.95), m=BUBBLE, radius=0.37, segments=24, ring_count=14), True),
+          shade(prim("cyl", loc=(0, 0, 1.64), m=HATACC, radius=0.3, depth=0.11, vertices=22), True),
+          rod(0.012, 0.25, (0.2, -0.05, 2.36), HATACC, "z", 6),
+          shade(prim("uv", loc=(0.2, -0.05, 2.49), m=GLOW, radius=0.03, segments=8, ring_count=6), True)], "Hat_Astro")
+
+    band = shade(prim("cyl", loc=(0, 0, 2.04), m=HATMAIN, radius=0.268, depth=0.075, vertices=22), True)
+    join([band, shade(prim("uv", loc=(0, -0.27, 2.04), m=HATMAIN, radius=0.05, segments=10, ring_count=6), True),
+          box((0.06, 0.02, 0.24), (0.04, -0.29, 1.93), HATMAIN, rot=(0.25, 0.15, 0)),
+          box((0.06, 0.02, 0.2), (-0.04, -0.29, 1.95), HATMAIN, rot=(0.3, -0.2, 0))], "Hat_Bandana")
+
+    pack = shade(bevel(box((0.46, 0.2, 0.52), (0, -0.27, 1.25), DARK), 0.06, 3), True)
+    straps = [box((0.06, 0.03, 0.5), (x, 0.185, 1.3), DARK) for x in (-0.16, 0.16)]
+    join([pack, bevel(box((0.36, 0.06, 0.2), (0, -0.39, 1.14), ACCENT), 0.02),
+          shade(rod(0.05, 0.4, (0, -0.27, 1.55), ACCENT, "x", 10), True)] + straps, "Acc_Pack")
+
+    ADD["torus"](location=(0, 0, 1.62), major_radius=0.18, minor_radius=0.06)
+    scarf = bpy.context.active_object
+    scarf.data.materials.append(SCARF)
+    join([shade(scarf, True), bevel(box((0.11, 0.04, 0.36), (0.1, 0.19, 1.44), SCARF, rot=(0.12, 0, 0.1)), 0.02)], "Acc_Scarf")
+
+    plates = []
+    for s in (-1, 1):
+        pad = prim("uv", loc=(s * 0.45, 0, 1.6), scale=(1.15, 1.15, 0.7), m=HATMAIN, radius=0.17, segments=16, ring_count=10)
+        keep(pad, lambda c: c.z > 1.55)
+        plates.append(shade(pad, True))
+    plates.append(shade(bevel(box((0.5, 0.06, 0.42), (0, 0.19, 1.3), HATMAIN), 0.05, 3), True))
+    plates.append(rod(0.05, 0.02, (0, 0.225, 1.33), HATACC, "y", 12))
+    join(plates, "Acc_Armor")
+
+    join([bevel(box((0.64, 0.04, 1.15), (0, -0.25, 1.02), CAPE, rot=(0.12, 0, 0)), 0.02),
+          box((0.66, 0.06, 0.06), (0, -0.2, 1.58), HATACC)], "Acc_Cape")
+
+    tanks = []
+    for x in (-0.11, 0.11):
+        tanks.append(shade(rod(0.1, 0.55, (x, -0.28, 1.28), HATACC, "z", 14), True))
+        tanks.append(shade(prim("uv", loc=(x, -0.28, 1.56), m=HATACC, radius=0.1, segments=12, ring_count=8), True))
+    tanks.append(rod(0.025, 0.3, (0, -0.2, 1.62), DARK, "x", 8))
+    join(tanks, "Acc_Tank")
 
 
 def glider():
@@ -700,7 +818,7 @@ def boat():
 
 
 # ---------------------------------------------------------------- build all
-torso(); head(); arm(-1); arm(1); leg(-1); leg(1); glider(); pickaxe()
+torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
 pine("PineA", 1); pine("PineB", 2); round_tree("RoundA", 3); round_tree("RoundB", 4)
 rock("RockA", 5); rock("RockB", 6); rock("RockC", 7)
