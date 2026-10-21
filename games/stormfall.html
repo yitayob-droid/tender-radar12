@@ -1896,11 +1896,11 @@ function renderLobby(){
   const st=$('mpstatus'),list=$('mplist');
   const show=(id,on)=>{$(id).hidden=!on;};
   if(!NET.room){
-    st.textContent=NET.roomTried?'Multiplayer works when you open Stormfall from its claude.ai link. Solo play works anywhere.':'Connecting to the lobby…';
+    st.textContent=NET.roomTried?'You aren’t connected to the multiplayer lobby. Sign in to claude.ai, and ask the game’s owner to invite you by email from the Share menu (opening a public link isn’t enough). Solo play still works.':'Connecting to the lobby…';
     list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);return;
   }
   const people=NET.peers.filter(p=>p.kind==='viewer');
-  st.textContent=people.length>1?people.length+' people here. Host a match, or join someone who is hosting.':'Nobody else is here yet. Share this artifact with friends, then host a match.';
+  st.textContent=people.length>1?people.length+' people here. Host a match, or join someone who is hosting.':'You’re connected, but nobody else is here yet. Invite friends by email from the Share menu and have them open this page.';
   const rows=people.map(p=>{
     const pr=p.presence||{},lb=pr.lb||{},me=p.isMe&&p.sameTab,row=document.createElement('div');row.className='mprow'+(me?' me':'');
     const sw=document.createElement('i');sw.style.background='#'+skinById(pr.sk).suit.toString(16).padStart(6,'0');
