@@ -248,11 +248,11 @@ const RARITY=[
   {n:'Epic',c:'#c07bff',hex:0xc07bff,m:1.2},
   {n:'Legendary',c:'#ffb32b',hex:0xffb32b,m:1.3}];
 const GUNS={
-  ar:{name:'Assault Rifle',short:'AR',dmg:31,rate:.14,mag:30,reload:2.1,spread:.035,aim:.009,range:220,pellets:1,ammo:'medium',auto:true,head:1.5,zoom:52,len:.95,want:24,snd:'ar',recoil:.006},
-  smg:{name:'Submachine Gun',short:'SMG',dmg:17,rate:.075,mag:30,reload:1.9,spread:.05,aim:.032,range:90,pellets:1,ammo:'light',auto:true,head:1.5,zoom:60,len:.62,want:12,snd:'smg',recoil:.004},
+  ar:{name:'Assault Rifle',short:'AR',dmg:31,rate:.14,mag:30,reload:2.1,spread:.024,aim:.004,range:220,pellets:1,ammo:'medium',auto:true,head:1.5,zoom:52,len:.95,want:24,snd:'ar',recoil:.006},
+  smg:{name:'Submachine Gun',short:'SMG',dmg:17,rate:.075,mag:30,reload:1.9,spread:.036,aim:.02,range:90,pellets:1,ammo:'light',auto:true,head:1.5,zoom:60,len:.62,want:12,snd:'smg',recoil:.004},
   shotgun:{name:'Pump Shotgun',short:'SG',dmg:11,rate:.85,mag:5,reload:3.2,spread:.085,aim:.07,range:45,pellets:9,ammo:'shells',auto:false,head:2,zoom:62,len:.9,want:5,snd:'shotgun',recoil:.03},
   sniper:{name:'Bolt Sniper',short:'SR',dmg:105,rate:1.6,mag:1,reload:2.6,spread:.12,aim:0,range:420,pellets:1,ammo:'heavy',auto:false,head:2.5,zoom:18,len:1.25,want:50,snd:'sniper',recoil:.04},
-  pistol:{name:'Pistol',short:'P',dmg:24,rate:.2,mag:16,reload:1.4,spread:.03,aim:.012,range:110,pellets:1,ammo:'light',auto:false,head:2,zoom:58,len:.42,want:16,snd:'pistol',recoil:.008}};
+  pistol:{name:'Pistol',short:'P',dmg:24,rate:.2,mag:16,reload:1.4,spread:.022,aim:.006,range:110,pellets:1,ammo:'light',auto:false,head:2,zoom:58,len:.42,want:16,snd:'pistol',recoil:.008}};
 const HEALS={
   shield:{name:'Shield Flask',short:'SHLD',time:2.2,max:3,hex:0x3fa9ff,css:'#45b5ff'},
   med:{name:'Med Kit',short:'MED',time:4,max:3,hex:0xf04a4a,css:'#ff6b6b'}};
@@ -560,8 +560,9 @@ class Char{
     const phead=mkBox(.7,.12,.12,0x9fb4c8,this.pickaxe);phead.position.y=.7;
     this.glider=new THREE.Group();this.glider.position.y=3.2;this.glider.visible=false;rig.add(this.glider);
     const wing=mkBox(3.2,.06,1.4,this.color,this.glider);const wstripe=mkBox(3.22,.07,.3,0xffd23f,this.glider);wstripe.position.z=-.3;
-    const body=new THREE.Mesh(boxGeo(.95,1.65,.75),HIDDEN);body.position.y=.83;body.userData={char:this,head:false};g.add(body);
-    const hd=new THREE.Mesh(boxGeo(.64,.6,.64),HIDDEN);hd.position.y=2.0;hd.userData={char:this,head:true};g.add(hd);
+    // hit boxes cover the whole visible model (arms and backpack included); head starts where the neck does
+    const body=new THREE.Mesh(boxGeo(1.4,1.72,1.05),HIDDEN);body.position.y=.86;body.userData={char:this,head:false};g.add(body);
+    const hd=new THREE.Mesh(boxGeo(.78,.7,.78),HIDDEN);hd.position.y=2.07;hd.userData={char:this,head:true};g.add(hd);
     this.hit=[body,hd];solids.push(body,hd);this.mesh=g;this.rig=rig;g.visible=false;
     world.add(g);
   }
@@ -660,6 +661,9 @@ function tryFire(c){
   const near=aim(c,_o,_d);
   const moving=Math.hypot(c.vel.x,c.vel.z)>1;
   let spread=(c.aiming?G.aim:G.spread)*(c.isPlayer&&moving&&!c.aiming?1.35:1)*(c.onGround?1:1.6);
+  // first-shot accuracy: a single-bullet gun that hasn't fired for a moment hits dead centre
+  if(c.isPlayer&&G.pellets===1&&match.t-(c.lastShot||-9)>.35&&c.onGround)spread=0;
+  c.lastShot=match.t;
   if(!c.isPlayer)spread=G.pellets>1?G.spread:spread*.4;
   muzzleWorld(c,_m);
   const mult=RARITY[it.rarity].m;
@@ -667,12 +671,13 @@ function tryFire(c){
     _p.copy(_d);if(spread>0){_p.x+=rand(-1,1)*spread;_p.y+=rand(-1,1)*spread;_p.z+=rand(-1,1)*spread;_p.normalize();}
     const h=firstHit(c,_o,_p,near,G.range);
     const end=h?h.point:tmpA.copy(_o).addScaledVector(_p,G.range);
-    if(i<3)tracer(_m,end);
+    if(i<(c.isPlayer?5:2))tracer(_m,end,c.isPlayer);
     if(h){let dmg=G.dmg*mult;
       if(G.pellets>1)dmg*=1-clamp((h.distance-8)/34,0,.7);
       if(it.id==='sniper'||it.id==='ar')dmg*=1-clamp((h.distance-120)/400,0,.25);
       applyHit(c,h,dmg,G.head,G.name,false);}
   }
+  muzzleFlash(_m,c.isPlayer?1:.7);
   sfx(G.snd,c.isPlayer?1:volAt(c.pos)*.9);
   if(c.isPlayer){c.pitch=clamp(c.pitch+G.recoil*(c.aiming?.5:1),-1.45,1.45);c.yaw+=rand(-1,1)*G.recoil*.3;}
   if(it.mag===0&&(c.ammo[G.ammo]>0||!c.isPlayer))setTimeout(()=>{if(c.alive&&c.slots[c.sel]===it)startReload(c);},120);
@@ -897,17 +902,36 @@ function burst(pos,color,n){
   for(let i=0;i<n;i++){const m=new THREE.Mesh(fxBox,new THREE.MeshBasicMaterial({color}));m.position.copy(pos);world.add(m);
     fx.push({type:'p',m,v:new V3(rand(-4,4),rand(1,6),rand(-4,4)),t:rand(.35,.6)});}
 }
-const tracerMat=new THREE.LineBasicMaterial({color:0xfff2a8,transparent:true,opacity:.9});
-function tracer(a,b){
-  const g=new THREE.BufferGeometry().setFromPoints([a.clone(),b.clone()]);const l=new THREE.Line(g,tracerMat.clone());world.add(l);fx.push({type:'tr',m:l,t:.07});
+// Bullets: a bright glowing round that flies from the muzzle to the hit point, leaving a fading trail.
+const glow=(color,op)=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+const unitCyl=new THREE.CylinderGeometry(1,1,1,6,1,true);unitCyl.translate(0,.5,0);
+const slugGeo=new THREE.CylinderGeometry(1,1,1,6);slugGeo.translate(0,.5,0);
+const flashGeo=new THREE.IcosahedronGeometry(1,0);
+const _up=new V3(0,1,0),_dir=new V3();
+function tracer(a,b,mine){
+  _dir.subVectors(b,a);const len=_dir.length();if(len<.05)return;_dir.divideScalar(len);
+  const r=mine?.035:.028;
+  const trail=new THREE.Mesh(unitCyl,glow(mine?0xffc94a:0xff8a3d,mine?.55:.45));
+  trail.position.copy(a);trail.quaternion.setFromUnitVectors(_up,_dir);trail.scale.set(r,len,r);world.add(trail);
+  fx.push({type:'trail',m:trail,t:.22,life:.22,op:trail.material.opacity});
+  const slugLen=Math.min(2.4,len),slug=new THREE.Mesh(slugGeo,glow(0xfff6c8,1));
+  slug.quaternion.copy(trail.quaternion);slug.scale.set(r*2.6,slugLen,r*2.6);slug.position.copy(a);world.add(slug);
+  const travel=Math.max(.04,len/320);
+  fx.push({type:'slug',m:slug,t:travel,life:travel,a:a.clone(),dir:_dir.clone(),dist:Math.max(0,len-slugLen)});
+}
+function muzzleFlash(at,s){
+  const m=new THREE.Mesh(flashGeo,glow(0xffe08a,.95));m.position.copy(at);m.scale.setScalar(rand(.16,.24)*s);m.rotation.set(rand(0,TAU),rand(0,TAU),0);world.add(m);
+  fx.push({type:'flash',m,t:.05});
 }
 function updateFx(dt){
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];
     if(f.type==='grow'){f.t+=dt*7;const s=Math.min(1,.2+f.t);for(const part of f.piece.parts)part.m.scale.set(s,s,s);if(s>=1)fx.splice(i,1);continue;}
     f.t-=dt;
     if(f.type==='p'){f.v.y-=20*dt;f.m.position.addScaledVector(f.v,dt);}
-    else if(f.type==='tr'){f.m.material.opacity=Math.max(0,f.t/.07);}
-    if(f.t<=0){world.remove(f.m);if(f.type==='tr')f.m.geometry.dispose();fx.splice(i,1);}
+    else if(f.type==='trail'){f.m.material.opacity=Math.max(0,f.t/f.life)*f.op;}
+    else if(f.type==='slug'){f.m.position.copy(f.a).addScaledVector(f.dir,f.dist*(1-Math.max(0,f.t)/f.life));}
+    else if(f.type==='flash'){f.m.scale.multiplyScalar(1.15);}
+    if(f.t<=0){world.remove(f.m);if(f.m.material.blending===THREE.AdditiveBlending)f.m.material.dispose();fx.splice(i,1);}
   }
 }
 const floatsEl=$('floats');
