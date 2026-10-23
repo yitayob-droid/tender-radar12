@@ -826,8 +826,65 @@ chest(); airship()
 house(); windmill(); lighthouse(); silo(); water_tower(); container()
 crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
 
+# ---------------------------------------------------------------- ambient occlusion
+# Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
+# per-corner colour attribute with Cycles. The game multiplies it into each colour.
+NO_GROUND = ("Gun_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
+
+
+def densify(o, max_edge=1.1, passes=3):
+    """Split long edges on big flat faces so baked shading stays local to corners and
+    creases instead of smearing across a whole wall (shading is stored per vertex)."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for _ in range(passes):
+        long_edges = [e for e in bm.edges if e.calc_length() > max_edge]
+        if not long_edges:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=True)
+    bm.to_mesh(o.data)
+    bm.free()
+
+
+DENSIFY = ("House", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
+
+
+def bake_ao(samples=48, distance=0.9):
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = samples
+    scene.render.bake.target = "VERTEX_COLORS"
+    if scene.world is None:
+        scene.world = bpy.data.worlds.new("World")
+    scene.world.light_settings.distance = distance
+    ADD["cube"](location=(0, 0, -0.05), size=1)
+    ground = bpy.context.active_object
+    ground.name = "_ground"
+    ground.scale = (60, 60, 0.1)
+    meshes = [o for o in bpy.data.objects if o.type == "MESH" and o is not ground]
+    for o in meshes:
+        o.hide_render = True
+        if o.name.startswith(DENSIFY):
+            densify(o)
+    for o in meshes:
+        o.hide_render = False
+        ground.hide_render = o.name.startswith(NO_GROUND)
+        attrs = o.data.color_attributes
+        ao = attrs.get("AO") or attrs.new("AO", "BYTE_COLOR", "CORNER")
+        attrs.active_color = ao
+        activate(o)
+        bpy.ops.object.bake(type="AO")
+        o.hide_render = True
+    bpy.data.objects.remove(ground)
+    for o in meshes:
+        o.hide_render = False
+
+
+bake_ao(samples=64, distance=0.7)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format="GLB", export_apply=True, export_yup=True,
-                          export_texcoords=False, export_normals=True, use_selection=False)
+                          export_texcoords=False, export_normals=True, use_selection=False,
+                          export_vertex_color="ACTIVE")
 print("wrote", GLB, os.path.getsize(GLB), "bytes")
 
 # ---------------------------------------------------------------- embed in the game page
