@@ -185,13 +185,13 @@ CAPE = mat("Cape", 0x8A1F2B)
 
 
 def torso():
-    t = box((0.6, 0.34, 0.66), (0, 0, 1.24), SUIT)
-    for v in t.data.vertices:  # broaden the shoulders, nip the waist
+    t = box((0.64, 0.36, 0.66), (0, 0, 1.24), SUIT)
+    for v in t.data.vertices:  # heroic V: broad chest and shoulders, narrow waist
         if v.co.z > 0:
-            v.co.x *= 1.16
-            v.co.y *= 1.05
+            v.co.x *= 1.3
+            v.co.y *= 1.12
         else:
-            v.co.x *= 0.94
+            v.co.x *= 0.9
     bevel(t, 0.08, 3)
     shade(t, True)
     parts = [t]
@@ -237,11 +237,13 @@ def head():
 
 def arm(side):
     x = 0.44 * side
-    parts = [shade(prim("uv", loc=(x, 0, 1.56), m=SUIT, radius=0.13, segments=16, ring_count=10), True)]
-    parts.append(shade(rod(0.092, 0.38, (x, 0, 1.38), SUIT, "z", 14), True))
-    parts.append(shade(rod(0.084, 0.06, (x, 0, 1.18), ACCENT, "z", 14), True))  # cuff
-    parts.append(shade(rod(0.074, 0.28, (x, 0, 1.02), SKIN, "z", 14), True))
-    hand = box((0.13, 0.16, 0.16), (x, 0.01, 0.84), GLOVE)
+    parts = [shade(prim("uv", loc=(x, 0, 1.56), m=SUIT, radius=0.15, segments=16, ring_count=10), True)]
+    upper = prim("cone", loc=(x, 0, 1.38), m=SUIT, radius1=0.098, radius2=0.118, depth=0.4, vertices=16)
+    parts.append(shade(upper, True))  # thicker at the shoulder, tapering to the elbow
+    parts.append(shade(rod(0.1, 0.07, (x, 0, 1.17), ACCENT, "z", 14), True))  # cuff
+    fore = prim("cone", loc=(x, 0, 1.02), m=SKIN, radius1=0.075, radius2=0.092, depth=0.28, vertices=14)
+    parts.append(shade(fore, True))
+    hand = box((0.15, 0.18, 0.18), (x, 0.01, 0.83), GLOVE)
     subsurf(hand, 2)
     parts.append(shade(hand, True))
     thumb = prim("uv", loc=(x - 0.07 * side, 0.06, 0.87), scale=(0.7, 0.7, 1.3), m=GLOVE, radius=0.04, segments=10, ring_count=6)
@@ -251,8 +253,8 @@ def arm(side):
 
 def leg(side):
     x = 0.16 * side
-    parts = [shade(rod(0.13, 0.42, (x, 0, 0.62), PANTS, "z", 14), True)]
-    parts.append(shade(rod(0.115, 0.36, (x, 0, 0.3), PANTS, "z", 14), True))
+    parts = [shade(prim("cone", loc=(x, 0, 0.62), m=PANTS, radius1=0.12, radius2=0.145, depth=0.42, vertices=14), True)]
+    parts.append(shade(prim("cone", loc=(x, 0, 0.3), m=PANTS, radius1=0.11, radius2=0.125, depth=0.36, vertices=14), True))
     parts.append(shade(bevel(box((0.17, 0.07, 0.15), (x, 0.1, 0.45), ACCENT), 0.03, 2), True))  # knee pad
     parts.append(shade(bevel(box((0.22, 0.34, 0.17), (x, 0.05, 0.085), BOOT), 0.06, 3), True))
     parts.append(box((0.23, 0.36, 0.035), (x, 0.05, 0.017), DARK))  # sole
@@ -515,7 +517,12 @@ def chest():
     parts = [base]
     for x in (-0.42, 0.42):
         parts.append(box((0.09, 0.84, 0.62), (x, 0, 0.3), CHESTMETAL))
-    parts.append(bevel(box((0.16, 0.05, 0.2), (0, 0.42, 0.5), ACCENT), 0.015))  # lock plate
+    parts.append(bevel(box((0.2, 0.05, 0.24), (0, 0.42, 0.48), SILO), 0.02))  # steel lock plate
+    parts.append(rod(0.025, 0.03, (0, 0.448, 0.5), EYE, "y", 10))  # keyhole
+    parts.append(box((0.018, 0.03, 0.05), (0, 0.448, 0.465), EYE))
+    for x in (-0.42, 0.42):  # rivets down the bands
+        for z in (0.1, 0.3, 0.5):
+            parts.append(shade(prim("uv", loc=(x, 0.425, z), m=SILO, radius=0.022, segments=8, ring_count=6), True))
     for y in (-0.32, -0.12, 0.12):  # plank seams
         parts.append(box((1.21, 0.012, 0.6), (0, y + 0.1, 0.3), CHESTMETAL))
     body = join(parts, "Chest")
@@ -817,9 +824,139 @@ def boat():
     return join(p, "Boat")
 
 
+# ---------------------------------------------------------------- more weapons, items, nature
+POTION = mat("Potion", 0x3FA9FF, 0.2)
+CLOTHW = mat("Bandage", 0xF2EEE4)
+REDX = mat("RedCross", 0xD83A3A)
+PADBASE = mat("PadBase", 0x2B2E3B)
+PADTOP = mat("PadTop", 0xFF8A1A)
+WILLOW = mat("Willow", 0x6FA83A)
+CLIFF = mat("Cliff", 0x9C9A92)
+CLIFF2 = mat("CliffDark", 0x7E7B72)
+
+
+def tactical():
+    p = [bevel(box((0.1, 0.36, 0.14), (0, 0.12, 0), GUNBODY), 0.02)]
+    p.append(bevel(box((0.11, 0.3, 0.1), (0, 0.42, 0.01), GUNDARK), 0.02))  # heat shield
+    p.append(rod(0.034, 0.24, (0, 0.62, 0.02), GUNDARK, "y"))
+    p.append(rod(0.045, 0.06, (0, 0.76, 0.02), GUNBODY, "y"))  # flared muzzle
+    p.append(bevel(box((0.075, 0.2, 0.13), (0, -0.12, -0.03), GUNDARK), 0.02))  # short stock
+    p.append(box((0.055, 0.07, 0.15), (0, 0.0, -0.12), GUNDARK, rot=(-0.3, 0, 0)))
+    p.append(box((0.06, 0.12, 0.06), (0, 0.38, -0.07), GUNDARK))  # fore grip rail
+    p.append(box((0.105, 0.22, 0.03), (0, 0.12, 0.055), RARITY))
+    return p
+
+
+def hunting():
+    p = [bevel(box((0.08, 0.34, 0.1), (0, 0.18, 0), GUNBODY), 0.01)]
+    p.append(rod(0.02, 0.85, (0, 0.78, 0.015), GUNDARK, "y"))
+    p.append(bevel(box((0.075, 0.6, 0.09), (0, 0.32, -0.04), WOOD), 0.02))  # long wooden fore-end
+    p.append(bevel(box((0.07, 0.38, 0.14), (0, -0.22, -0.04), WOOD, rot=(0.1, 0, 0)), 0.02))
+    p.append(box((0.02, 0.03, 0.04), (0, 1.15, 0.05), GUNDARK))  # front sight
+    p.append(rod(0.014, 0.07, (0.06, 0.12, 0.02), GUNDARK, "x", 8))  # bolt
+    p.append(box((0.085, 0.2, 0.025), (0, 0.18, 0.04), RARITY))
+    return p
+
+
+def minigun():
+    p = [bevel(box((0.2, 0.36, 0.2), (0, 0.05, 0), GUNBODY), 0.03)]
+    for k in range(6):
+        a = k * math.pi / 3
+        p.append(rod(0.022, 0.62, (math.cos(a) * 0.06, 0.5, math.sin(a) * 0.06), GUNDARK, "y", 8))
+    for y in (0.3, 0.72):
+        p.append(rod(0.09, 0.03, (0, y, 0), GUNDARK, "y", 14))
+    p.append(rod(0.07, 0.18, (0.0, -0.08, -0.17), GUNDARK, "x", 14))  # ammo drum
+    p.append(box((0.04, 0.24, 0.04), (0, 0.06, 0.15), GUNDARK))  # carry handle
+    p.append(box((0.205, 0.2, 0.03), (0, 0.05, 0.11), RARITY))
+    return p
+
+
+def rocket_launcher():
+    p = [shade(rod(0.07, 1.1, (0, 0.25, 0), GUNBODY, "y", 16), True)]
+    p.append(shade(prim("cone", loc=(0, 0.88, 0), rot=(-math.pi / 2, 0, 0), m=GUNDARK, radius1=0.095, radius2=0.07, depth=0.12, vertices=16), True))
+    p.append(shade(prim("cone", loc=(0, -0.36, 0), rot=(math.pi / 2, 0, 0), m=GUNDARK, radius1=0.1, radius2=0.07, depth=0.14, vertices=16), True))
+    p.append(box((0.05, 0.08, 0.14), (0, 0.05, -0.12), WOOD, rot=(-0.2, 0, 0)))
+    p.append(box((0.05, 0.08, 0.13), (0, 0.36, -0.11), WOOD, rot=(-0.2, 0, 0)))
+    p.append(box((0.04, 0.12, 0.08), (0.08, 0.3, 0.06), GUNDARK))  # sight
+    p.append(shade(rod(0.074, 0.18, (0, 0.25, 0), RARITY, "y", 16), True))
+    return p
+
+
+def rocket():
+    p = [shade(rod(0.05, 0.4, (0, 0, 0), GUNBODY, "y", 12), True)]
+    p.append(shade(prim("cone", loc=(0, 0.28, 0), rot=(-math.pi / 2, 0, 0), m=REDX, radius1=0.05, radius2=0.0, depth=0.18, vertices=12), True))
+    for k in range(4):
+        a = k * math.pi / 2
+        p.append(box((0.01, 0.1, 0.07), (math.cos(a) * 0.06, -0.17, math.sin(a) * 0.06), GUNDARK, rot=(0, -a, 0)))
+    return join(p, "Rocket")
+
+
+def heals():
+    # bandage roll
+    join([shade(rod(0.12, 0.2, (0, 0, 0.12), CLOTHW, "x", 16), True), shade(rod(0.122, 0.06, (0, 0, 0.12), REDX, "x", 16), True),
+          box((0.18, 0.16, 0.02), (0, 0.12, 0.02), CLOTHW, rot=(0.2, 0, 0))], "Heal_bandage")
+    # mini shield: small corked bottle
+    join([shade(prim("uv", loc=(0, 0, 0.12), scale=(1, 1, 1.1), m=POTION, radius=0.1, segments=14, ring_count=10), True),
+          shade(rod(0.035, 0.08, (0, 0, 0.25), BUBBLE, "z", 10), True), shade(rod(0.032, 0.05, (0, 0, 0.3), WOOD, "z", 10), True)], "Heal_mini")
+    # shield jar with a clamp lid
+    jar = shade(rod(0.14, 0.26, (0, 0, 0.15), POTION, "z", 18), True)
+    bevel(jar, 0.04, 3)
+    join([jar, shade(rod(0.12, 0.05, (0, 0, 0.3), SILO, "z", 18), True), box((0.02, 0.3, 0.02), (0.13, 0, 0.27), SILO, rot=(0.6, 0, 0)),
+          shade(rod(0.145, 0.03, (0, 0, 0.24), SILO, "z", 18), True)], "Heal_shield")
+    # med kit: white case with a red cross and a handle
+    join([bevel(box((0.46, 0.2, 0.32), (0, 0, 0.16), CLOTHW), 0.04, 2), box((0.26, 0.21, 0.07), (0, 0, 0.17), REDX),
+          box((0.07, 0.21, 0.24), (0, 0, 0.17), REDX), box((0.2, 0.05, 0.04), (0, 0, 0.35), DARK)], "Heal_med")
+
+
+def launch_pad():
+    p = [bevel(box((1.6, 1.6, 0.16), (0, 0, 0.08), PADBASE), 0.04)]
+    p.append(bevel(box((1.3, 1.3, 0.05), (0, 0, 0.18), PADTOP), 0.02))
+    for k in range(4):  # arrows pointing outward... and up
+        a = k * math.pi / 2
+        p.append(prism("arrow", [(math.cos(a) * 0.3 - math.sin(a) * 0.12, math.sin(a) * 0.3 + math.cos(a) * 0.12, 0.21),
+                                 (math.cos(a) * 0.3 + math.sin(a) * 0.12, math.sin(a) * 0.3 - math.cos(a) * 0.12, 0.21),
+                                 (math.cos(a) * 0.5, math.sin(a) * 0.5, 0.21)], (0, 0, 1), 0.02, GLOW))
+    p.append(rod(0.12, 0.03, (0, 0, 0.21), GLOW, "z", 16))
+    return join(p, "LaunchPad")
+
+
+def willow(name, seed):
+    random.seed(seed)
+    parts = [shade(rod(0.32, 3.4, (0, 0, 1.7), TRUNK, "z", 8), False)]
+    parts.append(shade(jitter(prim("ico", loc=(0, 0, 4.4), scale=(1.5, 1.5, 0.9), m=WILLOW, radius=1.7, subdivisions=1), 0.12), False))
+    # drooping fronds hanging all round the crown
+    for k in range(18):
+        a = k / 18 * 2 * math.pi + random.uniform(-0.1, 0.1)
+        r = random.uniform(1.7, 2.4)
+        length = random.uniform(2.2, 3.3)
+        f = prim("cone", loc=(math.cos(a) * r, math.sin(a) * r, 4.3 - length / 2), rot=(math.pi, 0, 0), m=WILLOW,
+                 radius1=random.uniform(0.35, 0.5), radius2=0.08, depth=length, vertices=6)
+        parts.append(shade(jitter(f, 0.05), False))
+    return join(parts, name)
+
+
+def cliff(name, seed):
+    random.seed(seed)
+    c = prim("cube", loc=(0, 0, 2.5), scale=(4.0, 2.2, 5.0), m=CLIFF, size=1)
+    modify(c, "SUBSURF", levels=2, render_levels=2, subdivision_type="SIMPLE")
+    off = Vector([random.uniform(0, 40) for _ in range(3)])
+    for v in c.data.vertices:  # weathered faces with horizontal strata
+        n = noise.noise(v.co * 0.9 + off)
+        v.co.x += n * 0.35
+        v.co.y += n * 0.25 + 0.08 * math.sin(v.co.z * 3.1)
+        v.co.z = max(v.co.z, 0.0)
+    parts = [shade(c, False)]
+    for z in (1.2, 2.6, 3.9):  # darker ledges
+        parts.append(shade(jitter(box((4.1, 2.3, 0.18), (0, 0.02, z), CLIFF2), 0.05), False))
+    parts.append(shade(jitter(box((4.1, 2.3, 0.3), (0, 0, 5.0), LEAF), 0.06), False))  # grassy top
+    return join(parts, name)
+
+
 # ---------------------------------------------------------------- build all
 torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
+gun("Gun_tac", tactical); gun("Gun_hunting", hunting); gun("Gun_minigun", minigun); gun("Gun_rocket", rocket_launcher)
+rocket(); heals(); launch_pad(); willow("WillowA", 8); willow("WillowB", 9); cliff("CliffA", 10); cliff("CliffB", 11)
 pine("PineA", 1); pine("PineB", 2); round_tree("RoundA", 3); round_tree("RoundB", 4)
 rock("RockA", 5); rock("RockB", 6); rock("RockC", 7)
 chest(); airship()
@@ -829,7 +966,7 @@ crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
 # ---------------------------------------------------------------- ambient occlusion
 # Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
 # per-corner colour attribute with Cycles. The game multiplies it into each colour.
-NO_GROUND = ("Gun_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
+NO_GROUND = ("Gun_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
 
 
 def densify(o, max_edge=1.1, passes=3):
@@ -846,7 +983,7 @@ def densify(o, max_edge=1.1, passes=3):
     bm.free()
 
 
-DENSIFY = ("House", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
+DENSIFY = ("Cliff", "House", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
 
 
 def bake_ao(samples=48, distance=0.9):
