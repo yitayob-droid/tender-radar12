@@ -590,77 +590,6 @@ def gun(name, parts_fn):
     return join(parts, name)
 
 
-def ar():
-    p = [bevel(box((0.09, 0.5, 0.13), (0, 0.22, 0), GUNBODY), 0.012)]
-    p.append(bevel(box((0.075, 0.3, 0.12), (0, -0.17, -0.02), GUNDARK), 0.015))  # stock
-    p.append(bevel(box((0.09, 0.05, 0.15), (0, -0.33, -0.03), GUNBODY), 0.01))  # butt
-    p.append(bevel(box((0.1, 0.32, 0.1), (0, 0.62, -0.005), GUNDARK), 0.012))  # handguard
-    p.append(rod(0.022, 0.34, (0, 0.94, 0.01), GUNDARK, "y"))
-    p.append(rod(0.032, 0.08, (0, 1.1, 0.01), GUNBODY, "y"))  # muzzle brake
-    p.append(box((0.05, 0.22, 0.04), (0, 0.24, 0.085), GUNDARK))  # rail
-    p.append(rod(0.032, 0.16, (0, 0.25, 0.13), GUNDARK, "y"))  # scope tube
-    p.append(rod(0.036, 0.01, (0, 0.33, 0.13), LENS, "y"))
-    p.append(box((0.06, 0.08, 0.24), (0, 0.33, -0.16), GUNDARK, rot=(0.25, 0, 0)))  # magazine
-    p.append(box((0.06, 0.07, 0.16), (0, 0.05, -0.12), GUNDARK, rot=(-0.3, 0, 0)))  # grip
-    p.append(box((0.096, 0.3, 0.03), (0, 0.22, 0.04), RARITY))
-    return p
-
-
-def smg():
-    p = [bevel(box((0.085, 0.36, 0.12), (0, 0.15, 0), GUNBODY), 0.012)]
-    p.append(rod(0.034, 0.2, (0, 0.43, 0.01), GUNDARK, "y"))  # shroud
-    p.append(rod(0.018, 0.1, (0, 0.58, 0.01), GUNDARK, "y"))
-    p.append(box((0.05, 0.07, 0.28), (0, 0.13, -0.19), GUNDARK))  # mag
-    p.append(box((0.055, 0.06, 0.14), (0, -0.01, -0.11), GUNDARK, rot=(-0.25, 0, 0)))
-    for z in (-0.03, 0.04):  # wire stock
-        p.append(box((0.02, 0.22, 0.02), (0, -0.13, z), GUNDARK))
-    p.append(box((0.02, 0.02, 0.1), (0, -0.24, 0.005), GUNDARK))
-    p.append(box((0.03, 0.04, 0.04), (0, 0.3, 0.075), GUNDARK))  # sight
-    p.append(box((0.09, 0.22, 0.03), (0, 0.15, 0.04), RARITY))
-    return p
-
-
-def shotgun():
-    p = [bevel(box((0.09, 0.32, 0.12), (0, 0.1, 0), GUNBODY), 0.012)]
-    p.append(rod(0.028, 0.6, (0, 0.55, 0.025), GUNDARK, "y"))
-    p.append(rod(0.024, 0.48, (0, 0.5, -0.035), GUNDARK, "y"))  # magazine tube
-    p.append(bevel(box((0.085, 0.2, 0.085), (0, 0.42, -0.04), WOOD), 0.02))  # pump
-    stock = bevel(box((0.07, 0.34, 0.12), (0, -0.2, -0.04), WOOD, rot=(0.12, 0, 0)), 0.02)
-    p.append(stock)
-    p.append(box((0.055, 0.06, 0.13), (0, -0.02, -0.11), WOOD, rot=(-0.3, 0, 0)))
-    p.append(box((0.02, 0.03, 0.03), (0, 0.84, 0.06), ACCENT))  # bead sight
-    p.append(box((0.095, 0.18, 0.03), (0, 0.1, 0.045), RARITY))
-    return p
-
-
-def sniper():
-    p = [bevel(box((0.09, 0.46, 0.12), (0, 0.2, 0), GUNBODY), 0.012)]
-    p.append(rod(0.022, 0.78, (0, 0.82, 0.01), GUNDARK, "y"))
-    p.append(rod(0.03, 0.1, (0, 1.23, 0.01), GUNBODY, "y"))
-    p.append(rod(0.042, 0.4, (0, 0.24, 0.13), GUNDARK, "y"))  # scope
-    p.append(rod(0.052, 0.07, (0, 0.46, 0.13), GUNDARK, "y"))
-    p.append(rod(0.05, 0.012, (0, 0.5, 0.13), LENS, "y"))
-    for y in (0.14, 0.34):
-        p.append(box((0.03, 0.03, 0.06), (0, y, 0.08), GUNDARK))
-    p.append(rod(0.015, 0.08, (0.07, 0.05, 0.02), GUNDARK, "x"))  # bolt
-    p.append(shade(prim("uv", loc=(0.11, 0.05, 0.02), m=GUNDARK, radius=0.022, segments=8, ring_count=6), True))
-    p.append(bevel(box((0.075, 0.38, 0.13), (0, -0.23, -0.03), WOOD), 0.02))
-    p.append(box((0.055, 0.06, 0.14), (0, 0.0, -0.11), WOOD, rot=(-0.3, 0, 0)))
-    p.append(box((0.05, 0.06, 0.08), (0, 0.24, -0.09), GUNDARK))
-    p.append(box((0.096, 0.3, 0.03), (0, 0.2, 0.04), RARITY))
-    return p
-
-
-def pistol():
-    p = [bevel(box((0.07, 0.3, 0.08), (0, 0.12, 0.035), GUNBODY), 0.01)]
-    p.append(box((0.065, 0.24, 0.05), (0, 0.1, -0.03), GUNDARK))
-    p.append(bevel(box((0.06, 0.085, 0.17), (0, 0.0, -0.11), GUNDARK, rot=(-0.25, 0, 0)), 0.01))
-    p.append(rod(0.014, 0.04, (0, 0.28, 0.035), GUNDARK, "y"))
-    p.append(box((0.02, 0.02, 0.02), (0, 0.25, 0.085), ACCENT))
-    p.append(box((0.072, 0.12, 0.025), (0, 0.12, 0.065), RARITY))
-    return p
-
-
 # ---------------------------------------------------------------- nature
 LEAF2 = mat("Leaf2", 0x24563a)
 
@@ -985,45 +914,46 @@ def window(parts, center, normal, width=1.3, height=1.2):
 
 
 def house():
-    """12×12 m, walls 0.4 m thick and 4.4 m tall, doorway 2.8×3 m on the +Y side.
-    Matches the game's collision boxes exactly."""
+    """12×12 m, walls 0.4 m thick and 4.4 m tall, doorway 2.8×3 m on the +Y side. Matches the game's
+    collision boxes exactly. Each wall is its own object (HouseWall_F/B/R/L, front = door side) so the
+    game can break walls one at a time; "House" is the frame: floor, corner posts, porch, roof, chimney."""
     W, T, H, h = 12.0, 0.4, 4.4, 6.0
-    p = [box((W, T, H), (0, -h, H / 2), HOUSEWALL),
-         box((T, W - T, H), (h, 0, H / 2), HOUSEWALL),
-         box((T, W - T, H), (-h, 0, H / 2), HOUSEWALL)]
+    F, B, R, L, S = [], [], [], [], []
+    B.append(box((W, T, H), (0, -h, H / 2), HOUSEWALL))
+    R.append(box((T, W - T, H), (h, 0, H / 2), HOUSEWALL))
+    L.append(box((T, W - T, H), (-h, 0, H / 2), HOUSEWALL))
     seg = h - 1.4
-    for s in (-1, 1):
-        p.append(box((seg, T, H), (s * (1.4 + seg / 2), h, H / 2), HOUSEWALL))
-    p.append(box((2.8, T, H - 3), (0, h, 3 + (H - 3) / 2), HOUSEWALL))
+    for s_ in (-1, 1):
+        F.append(box((seg, T, H), (s_ * (1.4 + seg / 2), h, H / 2), HOUSEWALL))
+    F.append(box((2.8, T, H - 3), (0, h, 3 + (H - 3) / 2), HOUSEWALL))
     for x in (-h, h):  # corner posts
         for y in (-h, h):
-            p.append(box((0.55, 0.55, H + 0.05), (x, y, H / 2), TRIM))
+            S.append(box((0.55, 0.55, H + 0.05), (x, y, H / 2), TRIM))
     for x in (-3, 3):
-        window(p, (x, -h, 2.2), (0, -1, 0))
+        window(B, (x, -h, 2.2), (0, -1, 0))
     for y in (-3, 3):
-        window(p, (h, y, 2.2), (1, 0, 0))
-        window(p, (-h, y, 2.2), (-1, 0, 0))
+        window(R, (h, y, 2.2), (1, 0, 0))
+        window(L, (-h, y, 2.2), (-1, 0, 0))
     for x in (-3.9, 3.9):
-        window(p, (x, h, 2.2), (0, 1, 0), width=1.2)
-    for s in (-1, 1):  # door frame
-        p.append(box((0.2, 0.6, 3.05), (s * 1.5, h, 1.52), TRIM))
-    p.append(box((3.2, 0.6, 0.25), (0, h, 3.1), TRIM))
-    p.append(bevel(box((3.6, 1.3, 0.14), (0, h + 0.85, 0.07), STONE), 0.03))  # porch step
-    p.append(box((W - T, W - T, 0.04), (0, 0, 0.02), FLOOR))
-    # gabled roof, ridge along X
+        window(F, (x, h, 2.2), (0, 1, 0), width=1.2)
+    for s_ in (-1, 1):  # door frame
+        F.append(box((0.2, 0.6, 3.05), (s_ * 1.5, h, 1.52), TRIM))
+    F.append(box((3.2, 0.6, 0.25), (0, h, 3.1), TRIM))
+    S.append(bevel(box((3.6, 1.3, 0.14), (0, h + 0.85, 0.07), STONE), 0.03))  # porch step
+    S.append(box((W - T, W - T, 0.04), (0, 0, 0.02), FLOOR))
     rise, half = 2.6, h + 0.6
     ang = math.atan2(rise, half)
     length = math.hypot(half, rise)
-    for s in (-1, 1):
-        # tilt each slab so its outer (eave) edge is low and its inner edge meets the ridge
-        slab = box((W + 1.2, length, 0.26), (0, s * half / 2, H + rise / 2 + 0.13), ROOF, rot=(-s * ang, 0, 0))
-        p.append(slab)
-    p.append(box((W + 1.3, 0.45, 0.28), (0, 0, H + rise + 0.18), MILLROOF))  # ridge cap
+    for s_ in (-1, 1):  # gabled roof, ridge along X
+        S.append(box((W + 1.2, length, 0.26), (0, s_ * half / 2, H + rise / 2 + 0.13), ROOF, rot=(-s_ * ang, 0, 0)))
+    S.append(box((W + 1.3, 0.45, 0.28), (0, 0, H + rise + 0.18), MILLROOF))  # ridge cap
     for x in (-h, h):  # gable ends
-        p.append(prism("gable", [(x, -h, H), (x, h, H), (x, 0, H + rise)], (1, 0, 0), T, HOUSEWALL))
-    p.append(box((1.0, 1.0, 2.6), (3.4, -2.2, H + 1.9), BRICK))  # chimney
-    p.append(box((1.2, 1.2, 0.2), (3.4, -2.2, H + 3.25), STONE))
-    return join(p, "House")
+        S.append(prism("gable", [(x, -h, H), (x, h, H), (x, 0, H + rise)], (1, 0, 0), T, HOUSEWALL))
+    S.append(box((1.0, 1.0, 2.6), (3.4, -2.2, H + 1.9), BRICK))  # chimney
+    S.append(box((1.2, 1.2, 0.2), (3.4, -2.2, H + 3.25), STONE))
+    for parts, n in ((F, "F"), (B, "B"), (R, "R"), (L, "L")):
+        join(parts, "HouseWall_" + n)
+    return join(S, "House")
 
 
 def windmill():
@@ -1185,50 +1115,222 @@ CLIFF = mat("Cliff", 0x9C9A92)
 CLIFF2 = mat("CliffDark", 0x7E7B72)
 
 
+def tube(r, y0, y1, m, z=0.0, x=0.0, v=18):
+    """Smooth cylinder along Y with crisp end caps."""
+    o = rod(r, abs(y1 - y0), (x, (y0 + y1) / 2, z), m, "y", v)
+    shade(o, True)
+    return modify(o, "EDGE_SPLIT", split_angle=math.radians(40), use_edge_angle=True, use_edge_sharp=False)
+
+
+def cone_y(r0, r1, y0, y1, m, z=0.0, x=0.0, v=18):
+    o = prim("cone", loc=(x, (y0 + y1) / 2, z), rot=(-math.pi / 2, 0, 0), m=m, radius1=r0, radius2=r1, depth=abs(y1 - y0), vertices=v)
+    shade(o, True)
+    return modify(o, "EDGE_SPLIT", split_angle=math.radians(40), use_edge_angle=True, use_edge_sharp=False)
+
+
+def ring_y(r, minor, y, m, z=0.0):
+    o = prim("torus", loc=(0, y, z), rot=(math.pi / 2, 0, 0), m=m, major_radius=r, minor_radius=minor, major_segments=24, minor_segments=6)
+    return shade(o, True)
+
+
+def guard(y0, y1, z0, z1, t=0.012, w=0.03):
+    """U-shaped trigger guard below the receiver."""
+    pts = [(y0, z0), (y0 + t, z0), (y0 + t, z1 + t), (y1 - t, z1 + t), (y1 - t, z0), (y1, z0), (y1, z1), (y0, z1)]
+    return slab("guard", pts, w, GUNDARK, bev=0.003)
+
+
+def railteeth(y0, y1, z, n, w=0.05):
+    p = [box((w, y1 - y0, 0.016), (0, (y0 + y1) / 2, z), GUNDARK)]
+    for k in range(n):
+        p.append(box((w + 0.006, 0.012, 0.012), (0, y0 + 0.02 + k * (y1 - y0 - 0.04) / max(n - 1, 1), z + 0.012), GUNDARK))
+    return p
+
+
+def reddot(y, z):
+    return [slab("dot", [(y - 0.06, z), (y + 0.06, z), (y + 0.05, z + 0.07), (y - 0.04, z + 0.07)], 0.05, GUNDARK, bev=0.006),
+            tube(0.02, y + 0.045, y + 0.052, LENS, z=z + 0.04, v=16)]
+
+
+def mag_curve(y0, z0, y1, z1, curve, rx=0.027, rn=0.048):
+    P0, P2 = Vector((0, y0, z0)), Vector((0, y1, z1))
+    P1 = (P0 + P2) / 2 + Vector((0, -curve, 0))
+    return loft("mag", 10, 14, lambda t: (bez(P0, P1, P2, t), rx, rn), [GUNDARK])
+
+
+def ar():
+    p = [slab("rcv", [(-0.08, 0.02), (0.47, 0.02), (0.47, 0.105), (0.05, 0.105), (-0.02, 0.12), (-0.08, 0.12)], 0.085, GUNBODY)]
+    p.append(slab("rstripe", [(0.0, 0.055), (0.4, 0.055), (0.4, 0.08), (0.0, 0.08)], 0.09, RARITY, bev=0.004))
+    p.append(slab("lower", [(-0.06, -0.045), (0.27, -0.045), (0.25, 0.025), (-0.06, 0.025)], 0.075, GUNDARK))
+    p.append(slab("hguard", [(0.47, -0.03), (0.84, -0.02), (0.86, 0.03), (0.84, 0.095), (0.47, 0.1)], 0.095, GUNDARK))
+    for k in range(5):  # vent slats
+        p.append(box((0.1, 0.035, 0.016), (0, 0.53 + k * 0.06, 0.055), GUNBODY))
+    p.append(slab("hstripe", [(0.5, -0.012), (0.82, -0.008), (0.82, 0.014), (0.5, 0.014)], 0.1, RARITY, bev=0.004))
+    p += railteeth(0.04, 0.8, 0.115, 16)
+    p.append(tube(0.019, 0.84, 1.05, GUNDARK, z=0.035))
+    p.append(box((0.05, 0.04, 0.05), (0, 0.9, 0.035), GUNBODY))  # gas block
+    p.append(tube(0.031, 1.04, 1.12, GUNBODY, z=0.035))  # muzzle brake
+    for y in (1.065, 1.095):
+        p.append(box((0.07, 0.008, 0.02), (0, y, 0.035), GUNDARK))
+    p += reddot(0.24, 0.135)
+    p.append(slab("stock", [(-0.08, 0.11), (-0.36, 0.085), (-0.4, 0.07), (-0.41, -0.08), (-0.35, -0.1), (-0.25, -0.02), (-0.08, 0.0)], 0.07, GUNDARK))
+    p.append(slab("butt", [(-0.43, 0.075), (-0.4, 0.075), (-0.4, -0.085), (-0.43, -0.085)], 0.075, GUNBODY, bev=0.006))
+    p.append(box((0.072, 0.17, 0.025), (0, -0.22, 0.11), GUNBODY))  # cheek riser
+    p.append(slab("grip", [(-0.03, -0.045), (0.045, -0.045), (0.015, -0.21), (-0.065, -0.2)], 0.065, GUNDARK))
+    p.append(guard(0.05, 0.14, -0.045, -0.1))
+    p.append(box((0.012, 0.012, 0.04), (0, 0.085, -0.065), STEEL, rot=(0.3, 0, 0)))
+    p.append(mag_curve(0.17, -0.04, 0.25, -0.28, 0.05))
+    p.append(box((0.06, 0.07, 0.02), (0, 0.25, -0.285), GUNBODY))
+    p.append(box((0.03, 0.04, 0.02), (0.05, 0.12, 0.08), STEEL))  # charging handle
+    return p
+
+
+def smg():
+    p = [slab("rcv", [(-0.06, 0.0), (0.3, 0.0), (0.3, 0.1), (0.02, 0.1), (-0.06, 0.085)], 0.08, GUNBODY)]
+    p.append(slab("rstripe", [(0.0, 0.035), (0.27, 0.035), (0.27, 0.065), (0.0, 0.065)], 0.085, RARITY, bev=0.004))
+    p += railteeth(0.02, 0.28, 0.105, 7, 0.045)
+    p.append(box((0.03, 0.04, 0.05), (0, 0.06, 0.13), GUNDARK))  # rear sight
+    p.append(box((0.02, 0.03, 0.05), (0, 0.27, 0.13), GUNDARK))
+    p.append(tube(0.037, 0.3, 0.6, GUNDARK, z=0.05))  # suppressor
+    for y in (0.33, 0.57):
+        p.append(ring_y(0.038, 0.005, y, GUNBODY, z=0.05))
+    p.append(slab("mag", [(0.12, 0.0), (0.18, 0.0), (0.17, -0.3), (0.11, -0.3)], 0.05, GUNDARK, bev=0.006))
+    p.append(slab("grip", [(-0.02, 0.0), (0.045, 0.0), (0.015, -0.16), (-0.05, -0.15)], 0.06, GUNDARK))
+    p.append(guard(0.04, 0.11, 0.0, -0.05))
+    fg = prim("cyl", loc=(0, 0.25, -0.07), m=GUNDARK, radius=0.022, depth=0.12, vertices=14)
+    p.append(shade(fg, True))
+    for z in (-0.0, 0.07):  # folding stock
+        p.append(box((0.018, 0.24, 0.018), (0.03, -0.17, z), GUNDARK))
+    p.append(slab("butt", [(-0.3, 0.1), (-0.27, 0.1), (-0.27, -0.03), (-0.3, -0.03)], 0.06, GUNBODY, bev=0.006))
+    return p
+
+
+def shotgun():
+    p = [slab("rcv", [(-0.05, -0.03), (0.22, -0.03), (0.22, 0.075), (0.0, 0.085), (-0.05, 0.065)], 0.085, GUNBODY)]
+    p.append(slab("rstripe", [(-0.02, 0.025), (0.2, 0.025), (0.2, 0.05), (-0.02, 0.05)], 0.09, RARITY, bev=0.004))
+    p.append(tube(0.027, 0.22, 0.87, GUNDARK, z=0.045))
+    p.append(tube(0.022, 0.22, 0.78, GUNDARK, z=-0.012))
+    p.append(box((0.03, 0.04, 0.09), (0, 0.78, 0.017), GUNBODY))  # barrel clamp
+    p.append(tube(0.039, 0.36, 0.57, WOOD, z=-0.012))  # pump
+    for k in range(5):
+        p.append(ring_y(0.039, 0.005, 0.39 + k * 0.035, GUNDARK, z=-0.012))
+    p.append(slab("stock", [(-0.05, 0.055), (-0.38, 0.0), (-0.41, -0.13), (-0.34, -0.155), (-0.12, -0.065), (-0.05, -0.03)], 0.07, WOOD))
+    p.append(slab("pad", [(-0.43, 0.01), (-0.4, 0.0), (-0.43, -0.13), (-0.46, -0.12)], 0.072, GUNDARK, bev=0.005))
+    p.append(guard(0.04, 0.13, -0.03, -0.085))
+    p.append(shade(prim("uv", loc=(0, 0.855, 0.08), m=ACCENT, radius=0.009, segments=10, ring_count=6), True))  # bead
+    for k in range(4):  # spare shells on the side
+        p.append(rod(0.011, 0.055, (0.047, 0.02 + k * 0.035, 0.02), REDX, "z", 10))
+    return p
+
+
 def tactical():
-    p = [bevel(box((0.1, 0.36, 0.14), (0, 0.12, 0), GUNBODY), 0.02)]
-    p.append(bevel(box((0.11, 0.3, 0.1), (0, 0.42, 0.01), GUNDARK), 0.02))  # heat shield
-    p.append(rod(0.034, 0.24, (0, 0.62, 0.02), GUNDARK, "y"))
-    p.append(rod(0.045, 0.06, (0, 0.76, 0.02), GUNBODY, "y"))  # flared muzzle
-    p.append(bevel(box((0.075, 0.2, 0.13), (0, -0.12, -0.03), GUNDARK), 0.02))  # short stock
-    p.append(box((0.055, 0.07, 0.15), (0, 0.0, -0.12), GUNDARK, rot=(-0.3, 0, 0)))
-    p.append(box((0.06, 0.12, 0.06), (0, 0.38, -0.07), GUNDARK))  # fore grip rail
-    p.append(box((0.105, 0.22, 0.03), (0, 0.12, 0.055), RARITY))
+    p = [slab("rcv", [(-0.07, -0.04), (0.3, -0.04), (0.3, 0.08), (0.22, 0.105), (-0.07, 0.105)], 0.1, GUNBODY)]
+    p.append(slab("rstripe", [(-0.04, 0.03), (0.27, 0.03), (0.27, 0.06), (-0.04, 0.06)], 0.105, RARITY, bev=0.004))
+    p.append(slab("shield", [(0.3, -0.005), (0.66, 0.005), (0.67, 0.05), (0.66, 0.095), (0.3, 0.105)], 0.1, GUNDARK))
+    for k in range(6):
+        p.append(box((0.106, 0.03, 0.02), (0, 0.34 + k * 0.05, 0.06), GUNBODY))
+    p.append(tube(0.03, 0.3, 0.75, GUNDARK, z=0.035))
+    p.append(cone_y(0.03, 0.05, 0.74, 0.8, GUNBODY, z=0.035))
+    p.append(tube(0.024, 0.3, 0.62, GUNDARK, z=-0.03))
+    p += reddot(0.08, 0.105)
+    p.append(slab("grip", [(-0.04, -0.04), (0.035, -0.04), (0.005, -0.2), (-0.075, -0.19)], 0.066, GUNDARK))
+    p.append(guard(0.04, 0.13, -0.04, -0.095))
+    p.append(slab("stock", [(-0.07, 0.08), (-0.24, 0.05), (-0.26, -0.09), (-0.2, -0.1), (-0.07, -0.02)], 0.08, GUNDARK))
+    p.append(slab("fore", [(0.36, -0.03), (0.44, -0.03), (0.43, -0.11), (0.37, -0.11)], 0.05, GUNDARK, bev=0.008))
+    return p
+
+
+def sniper():
+    p = [slab("rcv", [(-0.06, 0.0), (0.42, 0.0), (0.42, 0.1), (-0.06, 0.1)], 0.085, GUNBODY)]
+    p.append(slab("rstripe", [(0.0, 0.035), (0.4, 0.035), (0.4, 0.065), (0.0, 0.065)], 0.09, RARITY, bev=0.004))
+    p.append(tube(0.022, 0.42, 1.19, GUNDARK, z=0.05))
+    p.append(tube(0.033, 1.18, 1.3, GUNBODY, z=0.05))
+    for y in (1.21, 1.24, 1.27):
+        p.append(box((0.075, 0.008, 0.02), (0, y, 0.05), GUNDARK))
+    # scope with bells, lenses, turrets and rings
+    p.append(tube(0.034, 0.08, 0.44, GUNDARK, z=0.175))
+    p.append(cone_y(0.046, 0.034, 0.0, 0.08, GUNDARK, z=0.175))
+    p.append(cone_y(0.034, 0.056, 0.44, 0.54, GUNDARK, z=0.175))
+    p.append(tube(0.052, 0.535, 0.545, LENS, z=0.175))
+    p.append(tube(0.04, -0.002, 0.004, LENS, z=0.175))
+    p.append(shade(prim("cyl", loc=(0, 0.26, 0.22), m=GUNBODY, radius=0.02, depth=0.04, vertices=14), True))
+    p.append(shade(rod(0.02, 0.04, (0.045, 0.26, 0.175), GUNBODY, "x", 14), True))
+    for y in (0.14, 0.38):
+        p.append(box((0.05, 0.03, 0.07), (0, y, 0.13), GUNDARK))
+        p.append(ring_y(0.037, 0.008, y, GUNBODY, z=0.175))
+    p.append(shade(rod(0.012, 0.09, (0.065, 0.05, 0.06), STEEL, "x", 10), True))  # bolt
+    p.append(shade(prim("uv", loc=(0.11, 0.05, 0.06), m=GUNDARK, radius=0.021, segments=12, ring_count=8), True))
+    p.append(slab("stock", [(-0.06, 0.09), (-0.43, 0.075), (-0.45, -0.11), (-0.37, -0.125), (-0.13, -0.04), (-0.1, -0.17), (-0.03, -0.17), (0.0, -0.005)], 0.072, GUNDARK))
+    p.append(box((0.074, 0.2, 0.03), (0, -0.25, 0.09), RARITY))  # cheek pad
+    p.append(guard(0.04, 0.13, 0.0, -0.055))
+    p.append(slab("mag", [(0.18, 0.0), (0.27, 0.0), (0.26, -0.07), (0.19, -0.07)], 0.05, GUNDARK, bev=0.006))
+    for sx in (-1, 1):  # folded bipod
+        p.append(rod(0.008, 0.26, (sx * 0.02, 0.68, 0.02), GUNDARK, "y", 8))
+    return p
+
+
+def pistol():
+    p = [slab("slide", [(-0.04, 0.03), (0.29, 0.03), (0.29, 0.09), (-0.03, 0.09)], 0.065, GUNBODY)]
+    for k in range(5):  # rear serrations
+        p.append(box((0.068, 0.006, 0.045), (0, -0.02 + k * 0.014, 0.06), GUNDARK))
+    p.append(slab("frame", [(-0.03, -0.02), (0.26, -0.02), (0.26, 0.03), (-0.03, 0.03)], 0.06, GUNDARK))
+    p.append(slab("grip", [(-0.04, -0.02), (0.04, -0.02), (0.01, -0.19), (-0.07, -0.18)], 0.062, GUNDARK))
+    p.append(slab("gpanel", [(-0.03, -0.04), (0.03, -0.04), (0.005, -0.165), (-0.055, -0.155)], 0.068, RARITY, bev=0.004))
+    p.append(guard(0.03, 0.11, -0.02, -0.07))
+    p.append(tube(0.012, 0.29, 0.305, GUNDARK, z=0.06))
+    p.append(box((0.02, 0.015, 0.018), (0, 0.27, 0.098), GUNDARK))
+    p.append(box((0.04, 0.015, 0.018), (0, -0.02, 0.098), GUNDARK))
     return p
 
 
 def hunting():
-    p = [bevel(box((0.08, 0.34, 0.1), (0, 0.18, 0), GUNBODY), 0.01)]
-    p.append(rod(0.02, 0.85, (0, 0.78, 0.015), GUNDARK, "y"))
-    p.append(bevel(box((0.075, 0.6, 0.09), (0, 0.32, -0.04), WOOD), 0.02))  # long wooden fore-end
-    p.append(bevel(box((0.07, 0.38, 0.14), (0, -0.22, -0.04), WOOD, rot=(0.1, 0, 0)), 0.02))
-    p.append(box((0.02, 0.03, 0.04), (0, 1.15, 0.05), GUNDARK))  # front sight
-    p.append(rod(0.014, 0.07, (0.06, 0.12, 0.02), GUNDARK, "x", 8))  # bolt
-    p.append(box((0.085, 0.2, 0.025), (0, 0.18, 0.04), RARITY))
+    p = [slab("stock", [(-0.42, -0.1), (-0.4, 0.06), (-0.05, 0.06), (0.0, 0.0), (0.76, 0.0), (0.76, -0.04), (0.02, -0.06), (-0.06, -0.15),
+                        (-0.14, -0.15), (-0.1, -0.06), (-0.33, -0.11)], 0.07, WOOD)]
+    p.append(slab("pad", [(-0.44, -0.1), (-0.42, -0.1), (-0.4, 0.06), (-0.42, 0.06)], 0.072, GUNDARK, bev=0.004))
+    p.append(tube(0.03, -0.02, 0.3, GUNBODY, z=0.035))
+    p.append(tube(0.018, 0.3, 1.16, GUNDARK, z=0.035))
+    for y in (0.5, 0.7):
+        p.append(ring_y(0.022, 0.006, y, GOLD, z=0.02))
+    p.append(box((0.016, 0.02, 0.04), (0, 1.13, 0.065), GUNDARK))
+    p.append(box((0.03, 0.02, 0.03), (0, 0.32, 0.065), GUNDARK))
+    p.append(shade(rod(0.011, 0.08, (0.05, 0.1, 0.035), STEEL, "x", 10), True))
+    p.append(shade(prim("uv", loc=(0.09, 0.1, 0.035), m=GUNDARK, radius=0.017, segments=10, ring_count=6), True))
+    p.append(guard(0.0, 0.09, -0.04, -0.09))
+    p.append(slab("rstripe", [(-0.3, -0.02), (-0.08, -0.01), (-0.08, 0.02), (-0.3, 0.02)], 0.074, RARITY, bev=0.004))
     return p
 
 
 def minigun():
-    p = [bevel(box((0.2, 0.36, 0.2), (0, 0.05, 0), GUNBODY), 0.03)]
+    p = [tube(0.1, -0.15, 0.2, GUNBODY, v=24)]
+    p.append(cone_y(0.07, 0.1, -0.22, -0.15, GUNDARK, v=24))
+    p.append(ring_y(0.101, 0.012, 0.05, RARITY))
+    p.append(ring_y(0.101, 0.012, 0.12, RARITY))
     for k in range(6):
         a = k * math.pi / 3
-        p.append(rod(0.022, 0.62, (math.cos(a) * 0.06, 0.5, math.sin(a) * 0.06), GUNDARK, "y", 8))
-    for y in (0.3, 0.72):
-        p.append(rod(0.09, 0.03, (0, y, 0), GUNDARK, "y", 14))
-    p.append(rod(0.07, 0.18, (0.0, -0.08, -0.17), GUNDARK, "x", 14))  # ammo drum
-    p.append(box((0.04, 0.24, 0.04), (0, 0.06, 0.15), GUNDARK))  # carry handle
-    p.append(box((0.205, 0.2, 0.03), (0, 0.05, 0.11), RARITY))
+        p.append(tube(0.019, 0.2, 0.82, GUNDARK, z=math.sin(a) * 0.055, x=math.cos(a) * 0.055, v=12))
+    for y in (0.3, 0.56, 0.79):
+        p.append(tube(0.085, y - 0.015, y + 0.015, GUNBODY, v=24))
+    p.append(slab("handle", [(-0.05, 0.1), (0.15, 0.1), (0.15, 0.19), (0.12, 0.19), (0.12, 0.13), (-0.02, 0.13), (-0.02, 0.19), (-0.05, 0.19)], 0.03, GUNDARK, bev=0.004))
+    for sx in (-1, 1):
+        p.append(shade(rod(0.02, 0.12, (sx * 0.08, -0.2, -0.04), GUNDARK, "z", 12), True))
+    p.append(bevel(box((0.12, 0.2, 0.16), (-0.16, 0.0, -0.06), GUNDARK), 0.012))
+    for k in range(6):  # ammo belt
+        p.append(box((0.03, 0.02, 0.05), (-0.1 + k * 0.016, 0.05, -0.02 + k * 0.012), GOLD))
     return p
 
 
 def rocket_launcher():
-    p = [shade(rod(0.07, 1.1, (0, 0.25, 0), GUNBODY, "y", 16), True)]
-    p.append(shade(prim("cone", loc=(0, 0.88, 0), rot=(-math.pi / 2, 0, 0), m=GUNDARK, radius1=0.095, radius2=0.07, depth=0.12, vertices=16), True))
-    p.append(shade(prim("cone", loc=(0, -0.36, 0), rot=(math.pi / 2, 0, 0), m=GUNDARK, radius1=0.1, radius2=0.07, depth=0.14, vertices=16), True))
-    p.append(box((0.05, 0.08, 0.14), (0, 0.05, -0.12), WOOD, rot=(-0.2, 0, 0)))
-    p.append(box((0.05, 0.08, 0.13), (0, 0.36, -0.11), WOOD, rot=(-0.2, 0, 0)))
-    p.append(box((0.04, 0.12, 0.08), (0.08, 0.3, 0.06), GUNDARK))  # sight
-    p.append(shade(rod(0.074, 0.18, (0, 0.25, 0), RARITY, "y", 16), True))
+    p = [tube(0.075, -0.38, 0.86, GUNBODY, v=24)]
+    p.append(cone_y(0.075, 0.1, 0.85, 0.95, GUNDARK, v=24))
+    p.append(cone_y(0.095, 0.075, -0.46, -0.38, GUNDARK, v=24))
+    for y in (-0.2, 0.3, 0.72):
+        p.append(tube(0.081, y - 0.02, y + 0.02, GUNDARK, v=24))
+    p.append(tube(0.077, 0.48, 0.6, RARITY, v=24))
+    p.append(shade(prim("cone", loc=(0, 0.93, 0), rot=(-math.pi / 2, 0, 0), m=REDX, radius1=0.05, radius2=0.0, depth=0.1, vertices=16), True))
+    p.append(slab("sight", [(0.18, 0.07), (0.34, 0.07), (0.32, 0.15), (0.2, 0.15)], 0.04, GUNDARK, x=0.06, bev=0.006))
+    p.append(tube(0.018, 0.33, 0.34, LENS, z=0.12, x=0.06, v=12))
+    p.append(slab("grip1", [(0.02, -0.06), (0.09, -0.06), (0.06, -0.2), (-0.01, -0.19)], 0.055, GUNDARK))
+    p.append(slab("grip2", [(0.36, -0.06), (0.43, -0.06), (0.41, -0.18), (0.35, -0.17)], 0.055, GUNDARK))
+    p.append(bevel(box((0.1, 0.22, 0.05), (0, -0.25, -0.09), GUNDARK), 0.015))  # shoulder pad
     return p
 
 
@@ -1368,8 +1470,231 @@ def cliff(name, seed):
     return join(parts, name)
 
 
+# ---------------------------------------------------------------- lake props
+REED = mat("Reed", 0x6F8F3A)
+CATTAIL = mat("Cattail", 0x6B4223)
+LILY = mat("Lily", 0x3F8F3A)
+PETAL = mat("Petal", 0xF2A2C8)
+PLANK = mat("Plank", 0x8A6440)
+
+
+def reeds():
+    random.seed(51)
+    p = []
+    for k in range(11):
+        a = random.uniform(0, 2 * math.pi)
+        r = random.uniform(0, 0.35)
+        hgt = random.uniform(0.8, 1.4)
+        tilt = (random.uniform(-0.15, 0.15), random.uniform(-0.15, 0.15), 0)
+        stem = prim("cyl", loc=(math.cos(a) * r, math.sin(a) * r, hgt / 2), rot=tilt, m=REED, radius=0.014, depth=hgt, vertices=6)
+        p.append(shade(stem, True))
+        if k % 2 == 0:  # cattail head near the top
+            top = Vector((math.cos(a) * r, math.sin(a) * r, 0)) + Vector((tilt[1] * hgt * 0.9, -tilt[0] * hgt * 0.9, hgt * 0.92))
+            p.append(shade(prim("cyl", loc=top, rot=tilt, m=CATTAIL, radius=0.03, depth=0.16, vertices=10), True))
+    for k in range(6):  # long blades
+        a = k / 6 * 2 * math.pi
+        b = prim("cone", loc=(0, 0, 0), m=REED, radius1=0.05, radius2=0.0, depth=1.0, vertices=3, scale=(1, 0.3, 1))
+        for v in b.data.vertices:
+            v.co.z += 0.5
+            v.co.x += 0.25 * (v.co.z ** 2)
+        b.rotation_euler = (0, 0.2, a)
+        activate(b)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        p.append(shade(b, False))
+    return join(p, "Reeds")
+
+
+def lily(name, flower):
+    pts = [(math.cos(math.radians(a)) * 0.45, math.sin(math.radians(a)) * 0.45, 0.02) for a in range(25, 341, 15)] + [(0, 0, 0.02)]
+    pad = prism("pad", pts, (0, 0, 1), 0.025, LILY)
+    p = [shade(pad, False)]
+    if flower:
+        for k in range(7):
+            a = k / 7 * 2 * math.pi
+            pet = prim("uv", loc=(math.cos(a) * 0.06, math.sin(a) * 0.06, 0.08), scale=(1, 0.45, 0.35), m=PETAL, radius=0.07, segments=10, ring_count=6)
+            pet.rotation_euler = (0, -0.6, a)
+            activate(pet)
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+            p.append(shade(pet, True))
+        p.append(shade(prim("uv", loc=(0, 0, 0.1), m=ACCENT, radius=0.03, segments=8, ring_count=6), True))
+    return join(p, name)
+
+
+def campfire():
+    random.seed(52)
+    p = []
+    for k in range(9):  # stone ring
+        a = k / 9 * 2 * math.pi
+        st = prim("ico", loc=(math.cos(a) * 0.55, math.sin(a) * 0.55, 0.08), scale=(1.2, 1, 0.8), m=STONE, radius=0.13, subdivisions=2)
+        p.append(shade(jitter(st, 0.02), True))
+    for k in range(3):  # crossed logs
+        a = k / 3 * math.pi
+        lg = prim("cyl", loc=(0, 0, 0.12), rot=(0, math.pi / 2 - 0.25, a), m=WOOD, radius=0.07, depth=0.8, vertices=10)
+        p.append(shade(lg, True))
+    for k, (hh, rr) in enumerate(((0.75, 0.2), (0.55, 0.14), (0.45, 0.12))):  # flames
+        a = k * 2.1
+        f = prim("cone", loc=(math.cos(a) * 0.08 * k, math.sin(a) * 0.08 * k, 0.2 + hh / 2), m=GLOW, radius1=rr, radius2=0.0, depth=hh, vertices=10)
+        p.append(shade(jitter(f, 0.01), True))
+    return join(p, "Campfire")
+
+
+def shack():
+    """4.2×3.6 m fishing shack, plank walls 0.2 m thick, 1.2 m doorway on +Y, lean-to roof."""
+    W, D, H, T = 4.2, 3.6, 2.8, 0.2
+    p = [box((W, T, H + 0.4), (0, -D / 2, (H + 0.4) / 2), PLANK)]
+    for sx in (-1, 1):
+        side = box((T, D, H + 0.2), (sx * W / 2, 0, (H + 0.2) / 2), PLANK)
+        p.append(side)
+        p.append(box((W / 2 - 0.6, T, H), (sx * (0.6 + (W / 2 - 0.6) / 2), D / 2, H / 2), PLANK))
+    p.append(box((1.2, T, H - 2.1), (0, D / 2, 2.1 + (H - 2.1) / 2), PLANK))
+    for k in range(6):  # plank seams
+        z = 0.35 + k * 0.42
+        p.append(box((W + 0.02, D + 0.02, 0.03), (0, 0, z), GUNDARK))
+    p.append(box((W - T, D - T, 0.06), (0, 0, 0.03), FLOOR))
+    roof = box((W + 0.6, D + 0.9, 0.16), (0, 0.1, H + 0.35), ROOF, rot=(0.12, 0, 0))
+    p.append(roof)
+    window(p, (1.0, -D / 2, 1.6), (0, -1, 0), width=0.8, height=0.6)
+    return join(p, "Shack")
+
+
+# ---------------------------------------------------------------- more skins: hats and accessories
+def tube_path(name, n, m_ring, pts_fn, r_fn, mtl):
+    """General tube through 3-D points with radius r_fn(t)."""
+    cs = [pts_fn(i / n) for i in range(n + 1)]
+    bm = bmesh.new()
+    rings = []
+    for i, c in enumerate(cs):
+        tan = (Vector(cs[min(i + 1, n)]) - Vector(cs[max(i - 1, 0)])).normalized()
+        ref = Vector((0, 1, 0)) if abs(tan.y) < 0.9 else Vector((1, 0, 0))
+        s1 = tan.cross(ref).normalized()
+        s2 = s1.cross(tan).normalized()
+        r = r_fn(i / n)
+        rings.append([bm.verts.new(Vector(c) + (s1 * math.cos(k / m_ring * 2 * math.pi) + s2 * math.sin(k / m_ring * 2 * math.pi)) * r) for k in range(m_ring)])
+    for i in range(n):
+        for k in range(m_ring):
+            bm.faces.new((rings[i][k], rings[i][(k + 1) % m_ring], rings[i + 1][(k + 1) % m_ring], rings[i + 1][k]))
+    bm.faces.new(rings[0][::-1])
+    bm.faces.new(rings[-1])
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(o)
+    me.materials.append(mtl)
+    return shade(o, True)
+
+
+def accessories2():
+    # hood: deep cowl that frames the face, with a point at the back and a drape on the shoulders
+    hood = prim("uv", loc=(0, -0.02, 1.97), scale=(1.12, 1.15, 1.14), m=HATMAIN, radius=0.31, segments=26, ring_count=16)
+    keep(hood, lambda c: not (c.y > 0.1 and c.z < 2.13) and c.z > 1.66)
+    modify(hood, "SOLIDIFY", thickness=0.03)
+    tip = prim("cone", loc=(0, -0.33, 2.02), rot=(-2.0, 0, 0), m=HATMAIN, radius1=0.14, radius2=0.0, depth=0.3, vertices=12)
+    ADD["torus"](location=(0, 0, 1.64), major_radius=0.25, minor_radius=0.07, major_segments=24, minor_segments=8)
+    drape = bpy.context.active_object
+    drape.data.materials.append(HATMAIN)
+    join([shade(hood, True), shade(tip, True), shade(drape, True)], "Hat_Hood")
+
+    crown = prim("cyl", loc=(0, 0, 2.22), m=HATMAIN, radius=0.235, depth=0.28, vertices=28)
+    for v in crown.data.vertices:  # pinched, dented crown
+        if v.co.z > 0.1:
+            v.co.z -= 0.05 * (1 - abs(v.co.x) / 0.235)
+        v.co.y *= 0.88
+    bevel(crown, 0.04, 3)
+    brim = prim("cyl", loc=(0, 0, 2.09), m=HATMAIN, radius=0.52, depth=0.03, vertices=40)
+    for v in brim.data.vertices:  # brim curled up at the sides
+        v.co.z += 0.13 * (abs(v.co.x) / 0.52) ** 2.2
+        v.co.y *= 0.9
+    band = prim("cyl", loc=(0, 0, 2.13), m=HATACC, radius=0.238, depth=0.05, vertices=28)
+    band.scale.y = 0.88
+    join([shade(crown, True), shade(brim, True), shade(band, True)], "Hat_Cowboy")
+
+    dome = prim("uv", loc=(0, 0, 2.06), scale=(1, 1, 0.8), m=HATMAIN, radius=0.28, segments=22, ring_count=12)
+    keep(dome, lambda c: c.z > 2.05)
+    tri = prim("cyl", loc=(0, 0, 2.08), m=HATMAIN, radius=0.44, depth=0.04, vertices=36)
+    for v in tri.data.vertices:  # tricorn: brim turned up between three points
+        a = math.atan2(v.co.y, v.co.x)
+        rr = math.hypot(v.co.x, v.co.y) / 0.44
+        v.co.z += 0.2 * rr ** 2 * (0.5 - 0.5 * math.cos(3 * (a - math.pi / 2)))
+    skull = [shade(prim("uv", loc=(0, 0.35, 2.17), m=WHITE, radius=0.045, segments=12, ring_count=8), True)]
+    for ang in (0.6, -0.6):
+        skull.append(box((0.12, 0.02, 0.022), (0, 0.36, 2.12), WHITE, rot=(0, ang, 0)))
+    join([shade(dome, True), shade(tri, True)] + skull, "Hat_Pirate")
+
+    helm = prim("uv", loc=(0, 0, 1.98), scale=(1, 1.05, 1), m=HATMAIN, radius=0.32, segments=24, ring_count=14)
+    keep(helm, lambda c: c.z > 1.96)
+    band = shade(prim("cyl", loc=(0, 0, 1.99), m=HATMAIN, radius=0.325, depth=0.07, vertices=24), True)
+    nose = bevel(box((0.05, 0.03, 0.2), (0, 0.33, 1.92), HATMAIN), 0.01)
+    horns = []
+    for sx in (-1, 1):
+        P0, P1, P2 = Vector((sx * 0.27, 0, 2.08)), Vector((sx * 0.55, 0.02, 2.1)), Vector((sx * 0.56, 0.06, 2.45))
+        horns.append(tube_path("horn", 16, 12, lambda t, P0=P0, P1=P1, P2=P2: bez(P0, P1, P2, t), lambda t: 0.075 * (1 - t) + 0.004, HATACC))
+    join([shade(helm, True), band, nose] + horns, "Hat_Viking")
+
+    cowl = prim("uv", loc=(0, 0, 1.95), scale=(1.06, 1.1, 1.08), m=HATMAIN, radius=0.29, segments=24, ring_count=16)
+    keep(cowl, lambda c: c.z > 1.66 and not (c.y > 0.12 and 1.9 < c.z < 2.0))
+    modify(cowl, "SOLIDIFY", thickness=0.02)
+    ADD["torus"](location=(0, 0, 2.05), major_radius=0.3, minor_radius=0.028, major_segments=28, minor_segments=8)
+    hb = bpy.context.active_object
+    hb.data.materials.append(HATACC)
+    tails = [box((0.05, 0.02, 0.3), (sx * 0.05, -0.32, 1.93), HATACC, rot=(0.5, sx * 0.25, 0)) for sx in (-1, 1)]
+    join([shade(cowl, True), shade(hb, True)] + tails, "Hat_Ninja")
+
+    shark = prim("uv", loc=(0, -0.04, 2.0), scale=(1.05, 1.25, 0.98), m=HATMAIN, radius=0.4, segments=28, ring_count=16)
+    keep(shark, lambda c: not (c.y > 0.18 and 1.72 < c.z < 2.14) and c.z > 1.62)
+    modify(shark, "SOLIDIFY", thickness=0.03)
+    teeth = []
+    for k in range(9):
+        x = -0.22 + k * 0.055
+        teeth.append(shade(prim("cone", loc=(x, 0.3, 2.1), rot=(math.pi, 0, 0), m=WHITE, radius1=0.026, radius2=0.0, depth=0.07, vertices=8), True))
+        teeth.append(shade(prim("cone", loc=(x, 0.3, 1.76), m=WHITE, radius1=0.024, radius2=0.0, depth=0.06, vertices=8), True))
+    fin = prism("fin", [(0, -0.2, 2.33), (0, 0.12, 2.33), (0, -0.28, 2.68)], (1, 0, 0), 0.06, HATMAIN)
+    eyes = [shade(prim("uv", loc=(sx * 0.37, 0.12, 2.16), m=EYE, radius=0.05, segments=12, ring_count=8), True) for sx in (-1, 1)]
+    join([shade(shark, True), shade(fin, False)] + teeth + eyes, "Hat_Shark")
+
+    rhead = bevel(box((0.52, 0.46, 0.46), (0, 0, 1.95), HATMAIN), 0.07, 3)
+    screen = bevel(box((0.42, 0.03, 0.26), (0, 0.23, 1.96), VISOR), 0.02)
+    ears = [shade(rod(0.07, 0.06, (sx * 0.28, 0, 1.95), HATACC, "x", 16), True) for sx in (-1, 1)]
+    ant = [rod(0.012, 0.22, (0.12, 0, 2.27), DARK, "z", 8), shade(prim("uv", loc=(0.12, 0, 2.39), m=GLOW, radius=0.035, segments=10, ring_count=6), True)]
+    neck = shade(rod(0.1, 0.12, (0, 0, 1.68), DARK, "z", 16), True)
+    join([shade(rhead, True), shade(screen, True), neck] + ears + ant, "Hat_Robot")
+
+    cband = prim("cyl", loc=(0, 0, 2.14), m=HATMAIN, radius=0.275, depth=0.12, vertices=32, end_fill_type="NOTHING")
+    modify(cband, "SOLIDIFY", thickness=0.03)
+    pts = []
+    for k in range(8):
+        a = k / 8 * 2 * math.pi
+        pts.append(shade(prim("cone", loc=(math.cos(a) * 0.275, math.sin(a) * 0.275, 2.27), m=HATMAIN, radius1=0.05, radius2=0.0, depth=0.16, vertices=10), True))
+        pts.append(shade(prim("uv", loc=(math.cos(a) * 0.29, math.sin(a) * 0.29, 2.13), m=HATACC, radius=0.024, segments=10, ring_count=6), True))
+    join([shade(cband, True)] + pts, "Hat_Crown")
+
+    # katana across the back
+    blade = tube_path("blade", 12, 8, lambda t: (0, 0, 0.3 + t * 0.75), lambda t: 0.018 * (1 - t ** 3) + 0.002, STEEL)
+    blade.scale = (1, 0.35, 1)
+    sword = [blade, shade(rod(0.022, 0.26, (0, 0, 0.15), DARK, "z", 12), True), shade(rod(0.06, 0.015, (0, 0, 0.29), ACCENT, "z", 16), True)]
+    sw = join(sword, "tmp_sword")
+    sw.rotation_euler = (0, 0.75, 0)
+    sw.location = (-0.3, -0.24, 0.85)
+    activate(sw)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    sw.name = sw.data.name = "Acc_Sword"
+
+    feathers = []
+    for sx in (-1, 1):
+        for k in range(5):
+            a = 0.25 + k * 0.22
+            f = prim("uv", loc=(sx * (0.2 + 0.18 * k), -0.28, 1.45 + 0.12 * k - 0.04 * k * k), scale=(0.55, 0.08, 0.16), m=HATACC, radius=0.3, segments=12, ring_count=8)
+            f.rotation_euler = (0, sx * a, 0)
+            activate(f)
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+            feathers.append(shade(f, True))
+    join(feathers, "Acc_Wings")
+
+
 # ---------------------------------------------------------------- build all
-torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe(); pickaxe_ice(); pickaxe_gold()
+torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); accessories2(); glider(); pickaxe(); pickaxe_ice(); pickaxe_gold()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
 gun("Gun_tac", tactical); gun("Gun_hunting", hunting); gun("Gun_minigun", minigun); gun("Gun_rocket", rocket_launcher)
 rocket(); heals(); ammo(); launch_pad(); willow("WillowA", 8); willow("WillowB", 9); cliff("CliffA", 10); cliff("CliffB", 11)
@@ -1379,6 +1704,7 @@ rock("RockA", 5); rock("RockB", 6); rock("RockC", 7)
 chest(); airship()
 house(); windmill(); lighthouse(); silo(); water_tower(); container()
 crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
+reeds(); lily("LilyPad", False); lily("LilyFlower", True); campfire(); shack()
 
 # ---------------------------------------------------------------- ambient occlusion
 # Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
@@ -1400,7 +1726,7 @@ def densify(o, max_edge=1.1, passes=3):
     bm.free()
 
 
-DENSIFY = ("Cliff", "House", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
+DENSIFY = ("Cliff", "House", "Shack", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
 
 
 def bake_ao(samples=48, distance=0.9):
@@ -1441,7 +1767,7 @@ def bake_ao(samples=48, distance=0.9):
 # so flat faces stay crisp while corners catch a soft highlight.
 SMOOTH_ALL = ("Pine", "Round", "Birch", "Bush", "Willow", "Rock", "Cliff")
 FLAT = ("Fern", "GrassTuft")  # thin blades read better flat-shaded
-SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "_ground")
+SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "Gun_", "Reeds", "Lily", "Campfire", "_ground")
 
 
 def polish():
