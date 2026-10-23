@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
 <title>Stormfall</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,6 +152,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
 
 /* lobby: a 3D night stage behind the panels */
 #menu{background:none;display:block;padding:0;overflow:hidden}
+#menu[hidden]{display:none}
 .stagehit{position:absolute;inset:0;cursor:grab;touch-action:none}
 .stagehit:active{cursor:grabbing}
 #plates{position:absolute;inset:0;pointer-events:none}
@@ -189,6 +193,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
 .mprow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .mprow span{color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .mpbtns{display:flex;gap:10px;flex-wrap:wrap}
+.roomrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:13px;color:var(--dim)}
+.roomrow[hidden]{display:none}
+.roomrow b{font-family:var(--display);color:var(--volt);letter-spacing:.06em}
+.roomrow .btn2.small{margin-left:0}
+.roomrow span{margin-right:auto}
 .mpbtns [hidden]{display:none}
 .lockpanel{position:absolute;left:0;top:8px;width:min(420px,38vw);display:flex;flex-direction:column;gap:12px;background:rgba(8,10,30,.6);padding:16px;backdrop-filter:blur(4px)}
 .skinmeta{display:flex;flex-direction:column;gap:2px;text-shadow:0 2px 0 rgba(0,0,0,.6)}
@@ -316,7 +325,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
     <div class="lob-right">
       <div class="mp">
         <h2>Party</h2>
-        <p class="note" id="mpstatus">Connecting to the lobby…</p>
+        <div class="roomrow" id="roomrow" hidden>
+          <span>Room <b id="roomcode">PUBLIC</b></span>
+          <button class="btn2 small" id="privbtn" type="button">New private room</button>
+          <button class="btn2 small" id="invbtn" type="button">Copy invite link</button>
+        </div>
+        <p class="note" id="mpstatus">Connecting to the online lobby…</p>
         <div class="mplist" id="mplist"></div>
         <div class="mpbtns">
           <button class="btn2" id="hostbtn" type="button" hidden>Host a match</button>
@@ -1144,6 +1158,8 @@ function applyHit(src,h,dmg,headMult,weap,isMelee){
 }
 function damageChar(t,dmg,src,weap,head,isStorm){
   if(!t.alive)return;
+  // bots trade shots with each other at reduced damage so the lobby doesn't empty before you find anyone
+  if(src&&src.isBot&&t.isBot)dmg*=.35;
   dmg=Math.max(1,Math.round(dmg));
   if(t.remote){
     // someone else's character: tell their owner (a player, or the host for bots) and show the hit here
@@ -1173,7 +1189,11 @@ function eliminate(t,src,weap,fromNet){
   const drops=[];
   for(let i=1;i<5;i++)if(t.slots[i])drops.push(t.slots[i]);
   if(t.isPlayer){for(const k in t.ammo)if(t.ammo[k]>0)drops.push({kind:'ammo',type:k,amount:t.ammo[k]});}
-  else{const g=t.slots.find(s=>s&&s.kind==='gun');if(g)drops.push(ammoItem(GUNS[g.id].ammo),ammoItem(GUNS[g.id].ammo));}
+  else{let g=t.slots.find(s=>s&&s.kind==='gun');
+    // an unlucky bot still has something in its pockets, so every elimination pays out
+    if(!g){g=randomGun(0);drops.push(g);if(Math.random()<.5)drops.push(healItem());}
+    drops.push(ammoItem(GUNS[g.id].ammo),ammoItem(GUNS[g.id].ammo));
+    t.mats.wood=Math.max(t.mats.wood,randi(2,5)*10);}
   if(t.mats.wood>0)drops.push({kind:'mats',mat:'wood',amount:Math.min(t.mats.wood,t.isPlayer?999:60)});
   if(t.mats.stone>0)drops.push({kind:'mats',mat:'stone',amount:Math.min(t.mats.stone,t.isPlayer?999:40)});
   dropAround(drops,t.pos.x,t.pos.z,t.pos.y);
@@ -1617,17 +1637,22 @@ function wanderPoint(b){
 function think(b){
   const br=b.brain;let best=null,bd=1e9;
   for(const o of chars){if(o===b||!o.alive||o.state==='barge')continue;
-    const d=Math.hypot(o.pos.x-b.pos.x,o.pos.z-b.pos.z);if(d>80||d>=bd)continue;if(o.state==='sky'&&d>40)continue;
+    const d=Math.hypot(o.pos.x-b.pos.x,o.pos.z-b.pos.z);if(d>(o.isBot?45:80)||d>=bd)continue;if(o.state==='sky'&&d>40)continue;
     if(hasLOS(b,o)){best=o;bd=d;}}
   if(best){if(best!==br.target)br.react=rand(.35,.8)*(best.isPlayer?1.15:1);br.target=best;br.seen=true;br.lastSeen.copy(best.pos);br.lost=0;
     if(b.using){b.using=null;selectGun(b);}}
   else{br.seen=false;if(br.target){br.lost+=.5;if(br.lost>5||!br.target.alive)br.target=null;}}
   const dn=Math.hypot(b.pos.x-storm.nx,b.pos.z-storm.nz);
-  if(dn>storm.nr*.8+4){br.loot=null;if(!br.goal||Math.hypot(br.goal.x-storm.nx,br.goal.z-storm.nz)>storm.nr*.8)br.goal=zonePoint();}
+  // rotate to the zone once the storm is a threat; until then an unarmed bot keeps looting wherever it is
+  const urgent=inStorm(b)||storm.mode!=='wait'||storm.t<30;
+  if(dn>storm.nr*.8+4&&(urgent||botArmed(b))){br.loot=null;if(!br.goal||Math.hypot(br.goal.x-storm.nx,br.goal.z-storm.nz)>storm.nr*.8)br.goal=zonePoint();}
   else{
     // progress like a player: hunt for loot until armed, top up heals, chop wood when low
     if(br.loot&&!lootValid(br.loot))br.loot=null;
-    if(!br.loot&&!br.seen)br.loot=findLoot(b);
+    // give up on loot it can't reach in time (behind walls, up stairs) and look for something else
+    if(br.loot&&match.t-br.lootT>15){br.skip.add(br.loot.chest||br.loot.pickup||br.loot.res);br.loot=null;br.goal=null;}
+    // an unarmed bot keeps scrambling for loot even with someone in view
+    if(!br.loot&&(!br.seen||!botArmed(b))){br.loot=findLoot(b);if(br.loot)br.lootT=match.t;}
     if(br.loot)br.goal=br.loot.at;
     else if(!br.goal&&Math.random()<.5)br.goal=wanderPoint(b);
   }
@@ -1654,9 +1679,10 @@ function findLoot(b){
   const armed=botArmed(b),hasHeal=b.slots.some(s=>s&&s.kind==='heal'),free=b.slots.some((s,i)=>i>0&&!s);
   const want=it=>it.kind==='gun'?(!armed||free)&&free:it.kind==='heal'?free&&!hasHeal:it.kind==='mats';
   let best=null,bd=armed?35:80;
-  for(const pk of pickups){if(!want(pk.item))continue;const d=Math.hypot(pk.x-b.pos.x,pk.z-b.pos.z);if(d<bd&&Math.abs(pk.y-b.pos.y)<3){bd=d;best={pickup:pk,at:new V3(pk.x,0,pk.z)};}}
-  if(!armed||free)for(const ch of chests){if(ch.opened)continue;const d=Math.hypot(ch.x-b.pos.x,ch.z-b.pos.z);if(d<bd){bd=d;best={chest:ch,at:new V3(ch.x,0,ch.z)};}}
-  if(!best&&armed&&b.mats.wood<40)for(const r of resources){if(r.type!=='tree')continue;const d=Math.hypot(r.x-b.pos.x,r.z-b.pos.z);if(d<Math.min(bd,30)){bd=d;best={res:r,at:new V3(r.x,0,r.z)};}}
+  const skip=b.brain.skip;
+  for(const pk of pickups){if(!want(pk.item)||skip.has(pk))continue;const d=Math.hypot(pk.x-b.pos.x,pk.z-b.pos.z);if(d<bd&&Math.abs(pk.y-b.pos.y)<3){bd=d;best={pickup:pk,at:new V3(pk.x,0,pk.z)};}}
+  if(!armed||free)for(const ch of chests){if(ch.opened||skip.has(ch)||ch.y>b.pos.y+2)continue;const d=Math.hypot(ch.x-b.pos.x,ch.z-b.pos.z);if(d<bd){bd=d;best={chest:ch,at:new V3(ch.x,0,ch.z)};}}
+  if(!best&&armed&&b.mats.wood<40)for(const r of resources){if(r.type!=='tree'||skip.has(r))continue;const d=Math.hypot(r.x-b.pos.x,r.z-b.pos.z);if(d<Math.min(bd,30)){bd=d;best={res:r,at:new V3(r.x,0,r.z)};}}
   return best;
 }
 function botLootStep(b){
@@ -1707,7 +1733,7 @@ function updateBot(b,dt){
   b.vel.x=mx*speed;b.vel.z=mz*speed;
   br.stuckT+=dt;
   if(br.stuckT>.8){const moved=Math.hypot(b.pos.x-br.lastPos.x,b.pos.z-br.lastPos.z);
-    if(ml>.01&&moved<1.2){if(b.onGround)b.vel.y=10;if(++br.stuckN>2){br.goal=wanderPoint(b);br.stuckN=0;}}else br.stuckN=0;
+    if(ml>.01&&moved<1.2){if(b.onGround)b.vel.y=10;if(++br.stuckN>2){if(br.loot){br.skip.add(br.loot.chest||br.loot.pickup||br.loot.res);br.loot=null;}br.goal=wanderPoint(b);br.stuckN=0;}}else br.stuckN=0;
     br.stuckT=0;br.lastPos.copy(b.pos);}
   physics(b,dt);
 }
@@ -2027,7 +2053,7 @@ function newMatch(opts){
       let land;for(let k=0;k<20;k++){const a=rand(0,TAU),r=Math.sqrt(Math.random())*215;land=new V3(Math.cos(a)*r,0,Math.sin(a)*r);if(Math.random()<.5)break;}
       const ab=tmpA.subVectors(barge.to,barge.from),s=clamp((land.x-barge.from.x)*ab.x+(land.z-barge.from.z)*ab.z,0,1e9)/(ab.x*ab.x+ab.z*ab.z);
       b.brain={jumpT:clamp(s*barge.dur+rand(-1.5,1.5),.5,barge.dur-.3),land,target:null,seen:false,lastSeen:new V3(),lost:0,goal:null,think:rand(0,.5),react:0,
-        strafe:0,strafeT:0,buildCd:0,buildAt:0,buildFrom:null,loot:null,stuckT:0,stuckN:0,lastPos:new V3(),skill:rand(.03,.07)};
+        strafe:0,strafeT:0,buildCd:0,buildAt:0,buildFrom:null,loot:null,lootT:0,skip:new Set(),stuckT:0,stuckN:0,lastPos:new V3(),skill:rand(.03,.07)};
     }
     b.setHeld();chars.push(b);NET.byId.set(b.netId,b);
   }
@@ -2204,11 +2230,15 @@ function renderLobby(){
   const st=$('mpstatus'),list=$('mplist');
   const show=(id,on)=>{$(id).hidden=!on;};
   if(!NET.room){
-    st.textContent=NET.roomTried?'You aren’t connected to the multiplayer lobby. Sign in to claude.ai, and ask the game’s owner to invite you by email from the Share menu (opening a public link isn’t enough). Solo play still works.':'Connecting to the lobby…';
-    list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);show('startbtn',true);playMode();refreshParty();return;
+    st.textContent=NET.roomTried?'Couldn’t reach the online lobby, so multiplayer is off for now. Check your connection and reload; solo play still works.':'Connecting to the online lobby…';
+    $('roomrow').hidden=true;list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);show('startbtn',true);playMode();refreshParty();return;
   }
   const people=NET.peers.filter(p=>p.kind==='viewer');
-  st.textContent=people.length>1?people.length+' people here. Host a match, or join someone who is hosting.':'You’re connected, but nobody else is here yet. Invite friends by email from the Share menu and have them open this page.';
+  const p2p=NET.transport==='p2p',code=p2p?NET.room.code:'',pub=code==='public';
+  $('roomrow').hidden=!p2p;if(p2p)$('roomcode').textContent=pub?'PUBLIC':code.toUpperCase();
+  st.textContent=people.length>1?people.length+' people '+(p2p?(pub?'in the public lobby':'in this room'):'here')+'. Host a match, or join someone who is hosting.':
+    p2p?(pub?'Nobody else is in the public lobby right now. Make a private room and send your friends the invite link.':'You’re the only one in this room so far. Copy the invite link and send it to your friends.'):
+    'You’re connected, but nobody else is here yet. Invite friends by email from the Share menu and have them open this page.';
   const rows=people.map(p=>{
     const pr=p.presence||{},lb=pr.lb||{},me=p.isMe&&p.sameTab,row=document.createElement('div');row.className='mprow'+(me?' me':'');
     const sw=document.createElement('i');sw.style.background='#'+skinById(pr.sk).suit.toString(16).padStart(6,'0');
@@ -2253,20 +2283,73 @@ function hostStart(){
   NET.go=seed;NET.goList=list;lobbyPresence();
   newMatch({seed,mp:true,host:true,list,hostPeer:NET.me});lock();
 }
-async function connectRoom(){
+/* ---- online lobby over Trystero (WebRTC, peers find each other through public Nostr relays) ----
+   It mirrors the claude.ai room API the netcode uses: everyone's presence object, plus join/leave/update events. */
+const P2P_LIB='https://cdn.jsdelivr.net/npm/trystero@0.25.4/+esm';
+const P2P_APP='stormfall-thornwick-island-v1';
+const cleanCode=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+function roomCode(){try{return cleanCode(new URLSearchParams(location.search).get('room'))||'public';}catch(e){return 'public';}}
+async function p2pRoom(code){
+  const T=await import(P2P_LIB);
+  const room=T.joinRoom({appId:P2P_APP},'lobby-'+code),me=T.selfId;
+  const peers=new Map(),subs=[];let mine={},open=true;
+  const mk=(peer,pr,isMe)=>({peer,isMe,sameTab:isMe,kind:'viewer',presence:pr});
+  peers.set(me,mk(me,{},true));
+  const deliver=(joined,left,updated)=>{if(!open)return;const list=[...peers.values()];for(const f of subs)f({peers:list,joined,left,updated});};
+  const pres=room.makeAction('pres');
+  pres.onMessage=(pr,{peerId})=>{
+    // a peer's whole presence; the game checks every field before using it
+    if(!open||typeof peerId!=='string'||!pr||typeof pr!=='object'||Array.isArray(pr))return;
+    try{if(JSON.stringify(pr).length>24000)return;}catch(e){return;}
+    const ex=peers.has(peerId),p=mk(peerId,pr,false);peers.set(peerId,p);deliver(ex?[]:[p],[],ex?[p]:[]);
+  };
+  room.onPeerJoin=id=>{pres.send(mine,{target:id}).catch(()=>{});};
+  room.onPeerLeave=id=>{const p=peers.get(id);if(p){peers.delete(id);deliver([],[p],[]);}};
+  const relaysUp=()=>{try{return Object.values(T.getRelaySockets()).some(ws=>ws&&ws.readyState===1);}catch(e){return false;}};
+  return {code,relaysUp,
+    presence(patch){for(const k in patch){if(patch[k]===null||patch[k]===undefined)delete mine[k];else mine[k]=patch[k];}
+      peers.set(me,mk(me,{...mine},true));deliver([],[],[peers.get(me)]);
+      return pres.send(mine).then(()=>{},()=>{});},
+    onPeers(fn){subs.push(fn);setTimeout(()=>fn({peers:[...peers.values()],joined:[...peers.values()],left:[],updated:[]}),0);return()=>{};},
+    leave(){open=false;subs.length=0;try{room.leave();}catch(e){}}};
+}
+function attachRoom(room){
+  NET.room=room;NET.peers=[];
+  room.onPeers(ch=>{
+    if(NET.room!==room)return;
+    NET.peers=ch.peers;const me=ch.peers.find(p=>p.isMe&&p.sameTab);if(me)NET.me=me.peer;
+    if(game==='menu')renderLobby();
+    lobbyCheckStart();
+    if(NET.mp){for(const p of ch.joined.concat(ch.updated))if(!p.sameTab)netPeer(p);for(const p of ch.left)netGone(p.peer);}
+  },()=>{if(NET.room===room){NET.room=null;renderLobby();}});
+  lobbyPresence();renderLobby();
+}
+// Prefer the online (Trystero) lobby so friends on any link can meet; inside claude.ai, fall back to
+// the built-in room if the page can't reach the relays.
+async function connectRoom(code){
+  NET.transport=null;NET.roomTried=false;renderLobby();
+  let room=null;
   try{
-    const room=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;
-    NET.roomTried=true;
-    if(!room){renderLobby();return;}
-    NET.room=room;
-    room.onPeers(ch=>{
-      NET.peers=ch.peers;const me=ch.peers.find(p=>p.isMe&&p.sameTab);if(me)NET.me=me.peer;
-      if(game==='menu')renderLobby();
-      lobbyCheckStart();
-      if(NET.mp){for(const p of ch.joined.concat(ch.updated))if(!p.sameTab)netPeer(p);for(const p of ch.left)netGone(p.peer);}
-    },()=>{NET.room=null;renderLobby();});
-    lobbyPresence();renderLobby();
-  }catch(e){NET.roomTried=true;NET.room=null;renderLobby();}
+    const r=await p2pRoom(code||roomCode());
+    for(let i=0;i<40&&!r.relaysUp();i++)await new Promise(f=>setTimeout(f,200));
+    if(r.relaysUp()){room=r;NET.transport='p2p';}else r.leave();
+  }catch(e){}
+  if(!room){
+    try{const cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;if(cr){room=cr;NET.transport='claude';}}catch(e){}
+  }
+  NET.roomTried=true;
+  if(!room){NET.room=null;renderLobby();return;}
+  attachRoom(room);
+}
+async function switchRoom(code){
+  if(NET.mp||game!=='menu')return;
+  if(NET.room&&NET.room.leave)NET.room.leave();
+  NET.room=null;NET.peers=[];NET.mode='idle';NET.joinedTo=null;
+  try{const u=new URL(location.href);if(code==='public')u.searchParams.delete('room');else u.searchParams.set('room',code);history.replaceState(null,'',u);}catch(e){}
+  await connectRoom(code);
+}
+function inviteLink(){
+  try{const u=new URL(location.href);u.hash='';const c=NET.room&&NET.room.code;if(c&&c!=='public')u.searchParams.set('room',c);else u.searchParams.delete('room');return u.href;}catch(e){return location.href;}
 }
 
 /* ---- the lobby stage: a night clearing with your party on glowing pedestals (rendered by the main renderer) ---- */
@@ -2419,6 +2502,10 @@ function buildLobby(){
   $('hostbtn').addEventListener('click',()=>{NET.mode='hosting';NET.go=0;NET.goList=null;lobbyPresence();renderLobby();});
   $('leavebtn').addEventListener('click',()=>{NET.mode='idle';NET.joinedTo=null;lobbyPresence();renderLobby();});
   $('gobtn').addEventListener('click',()=>{initAudio();hostStart();});
+  $('privbtn').addEventListener('click',()=>{const c=Math.random().toString(36).slice(2,8);switchRoom(c);});
+  $('invbtn').addEventListener('click',async()=>{const b=$('invbtn'),link=inviteLink();
+    let ok=false;try{await navigator.clipboard.writeText(link);ok=true;}catch(e){}
+    if(!ok)prompt('Send this link to your friends:',link);else{b.textContent='Link copied!';setTimeout(()=>{b.textContent='Copy invite link';},1600);}});
   $('tablobby').addEventListener('click',()=>setTab('lobby'));$('tablocker').addEventListener('click',()=>setTab('locker'));
   setupStage();showSkin(LOBBY.skin);renderLobby();
 }
