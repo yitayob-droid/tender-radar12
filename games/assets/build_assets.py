@@ -469,31 +469,187 @@ def pistol():
 
 
 # ---------------------------------------------------------------- nature
+LEAF2 = mat("Leaf2", 0x24563a)
+
+
+def lumpy(o, amt, seed):
+    off = Vector((seed * 3.1, seed * 1.7, seed * 2.3))
+    for v in o.data.vertices:
+        v.co *= 1 + amt * noise.noise(v.co * 1.6 + off)
+    return o
+
+
+def flat_bottom(o, cut):
+    """Squash everything below a local height up to it, like the underside of a leaf clump."""
+    for v in o.data.vertices:
+        if v.co.z < cut:
+            v.co.z = cut + (v.co.z - cut) * 0.25
+    return o
+
+
+def skirt(r, depth, z, rot, m_top, m_under, points=16, droop=0.5):
+    """One drooping pine branch tier: a star-shaped cone with a concave dark underside."""
+    c = prim("cone", loc=(0, 0, z + depth / 2), rot=(0, 0, rot), m=m_top, radius1=r, radius2=0.0, depth=depth,
+             vertices=points, end_fill_type="TRIFAN")
+    c.data.materials.append(m_under)
+    bot = -depth / 2
+    for v in c.data.vertices:
+        if abs(v.co.z - bot) < 1e-4:
+            if abs(v.co.x) < 1e-4 and abs(v.co.y) < 1e-4:
+                v.co.z = bot + depth * 0.45  # pull the fan centre up: hollow underside
+                continue
+            ang = math.atan2(v.co.y, v.co.x)
+            tip = int(round(ang / (2 * math.pi / points))) % 2 == 0
+            k = random.uniform(1.12, 1.24) if tip else random.uniform(0.7, 0.8)
+            v.co.x *= k
+            v.co.y *= k
+            v.co.z += -droop * random.uniform(0.8, 1.2) if tip else 0.12
+    for poly in c.data.polygons:  # fan faces (all corners at or above the rim, centre raised) get the dark side
+        zs = [c.data.vertices[i].co.z for i in poly.vertices]
+        if max(zs) < bot + depth * 0.46 and len(poly.vertices) == 3 and any(abs(c.data.vertices[i].co.x) < 1e-4 and abs(c.data.vertices[i].co.y) < 1e-4 for i in poly.vertices):
+            poly.material_index = 1
+    return shade(jitter(c, 0.04), False)
+
+
 def pine(name, seed):
     random.seed(seed)
-    parts = [shade(rod(0.24, 2.2, (0, 0, 1.1), TRUNK, "z", 8), False)]
-    tiers = [(1.9, 2.6, 1.5), (1.5, 2.2, 2.9), (1.05, 1.8, 4.2), (0.6, 1.3, 5.3)]
-    for r, d, z in tiers:
-        c = prim("cone", loc=(0, 0, z + d / 2), rot=(0, 0, random.uniform(0, 6.3)), m=LEAF,
-                 radius1=r * random.uniform(0.92, 1.08), radius2=0, depth=d, vertices=9)
-        jitter(c, 0.1)
-        parts.append(shade(c, False))
+    H = 7.8
+    trunk = prim("cone", loc=(0, 0, H / 2), m=TRUNK, radius1=0.34, radius2=0.05, depth=H, vertices=10)
+    parts = [shade(jitter(trunk, 0.015), True)]
+    for k in range(5):  # root flare
+        a = k * 2 * math.pi / 5 + 0.4
+        parts.append(shade(prim("cone", loc=(math.cos(a) * 0.3, math.sin(a) * 0.3, 0.18), rot=(math.sin(a) * 1.0, -math.cos(a) * 1.0, 0),
+                                m=TRUNK, radius1=0.17, radius2=0.02, depth=0.62, vertices=6), True))
+    tiers = 8
+    for i in range(tiers):
+        f = i / (tiers - 1)
+        r = 2.7 * (1 - f) ** 0.95 + 0.45
+        z = 1.7 + f * 5.6 + random.uniform(-0.08, 0.08)
+        depth = 2.0 - f * 0.9
+        sk = skirt(r, depth, z, random.uniform(0, 6.3), LEAF, LEAF2, points=16 if i < 5 else 12, droop=0.55 - f * 0.25)
+        sk.location.x += random.uniform(-0.07, 0.07)
+        sk.location.y += random.uniform(-0.07, 0.07)
+        parts.append(sk)
+    parts.append(shade(prim("cone", loc=(0, 0, 7.9 + 0.6), m=LEAF, radius1=0.32, radius2=0.0, depth=1.3, vertices=8), False))
     return join(parts, name)
+
+
+def clump(loc, radius, m, seed, sub=2, squash=0.78, amt=0.2):
+    o = prim("ico", loc=(0, 0, 0), scale=(1, 1, squash), m=m, radius=radius, subdivisions=sub)
+    lumpy(o, amt, seed)
+    flat_bottom(o, -radius * squash * 0.62)
+    o.location = loc
+    return shade(o, False)
 
 
 def round_tree(name, seed):
     random.seed(seed)
-    trunk = shade(rod(0.26, 3.2, (0, 0, 1.6), TRUNK, "z", 8), False)
-    parts = [trunk]
-    branch = rod(0.1, 1.0, (0.3, 0, 2.8), TRUNK, "z", 6)
-    branch.rotation_euler = (0, 0.7, 0)
-    activate(branch)
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-    parts.append(shade(branch, False))
-    for loc, r in [((0, 0, 4.0), 1.55), ((0.95, 0.3, 3.5), 1.1), ((-0.85, -0.4, 3.6), 1.05), ((0.1, -0.7, 4.7), 1.0),
-                   ((-0.3, 0.8, 4.5), 0.9)]:
-        b = prim("ico", loc=loc, m=LEAF, radius=r * random.uniform(0.9, 1.1), subdivisions=1)
-        jitter(b, 0.13)
+    parts = [shade(jitter(prim("cone", loc=(0, 0, 1.65), m=TRUNK, radius1=0.44, radius2=0.25, depth=3.3, vertices=10), 0.02), True)]
+    for k in range(4):  # root flare
+        a = k * math.pi / 2 + 0.3
+        parts.append(shade(prim("cone", loc=(math.cos(a) * 0.36, math.sin(a) * 0.36, 0.2), rot=(math.sin(a) * 1.0, -math.cos(a) * 1.0, 0),
+                                m=TRUNK, radius1=0.2, radius2=0.03, depth=0.7, vertices=6), True))
+    crowns = []
+    for k in range(4):  # limbs fanning out of the trunk
+        a = k * math.pi / 2 + random.uniform(-0.35, 0.35)
+        tilt = random.uniform(0.6, 0.9)
+        L = random.uniform(1.7, 2.3)
+        base = Vector((0, 0, random.uniform(2.6, 3.1)))
+        d = Vector((math.cos(a) * math.sin(tilt), math.sin(a) * math.sin(tilt), math.cos(tilt)))
+        limb = prim("cone", loc=base + d * L / 2, m=TRUNK, radius1=0.17, radius2=0.08, depth=L, vertices=8)
+        limb.rotation_euler = d.to_track_quat("Z", "Y").to_euler()
+        activate(limb)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        parts.append(shade(limb, True))
+        crowns.append(base + d * L + Vector((0, 0, 0.35)))
+    crowns.append(Vector((0, 0, 5.9)))
+    for i, cpos in enumerate(crowns):
+        big = 1.95 if i == len(crowns) - 1 else random.uniform(1.55, 1.8)
+        parts.append(clump(cpos, big, LEAF, seed * 13 + i, squash=0.92))
+        parts.append(clump(cpos + Vector((0, 0, -0.3)), big * 0.86, LEAF2, seed * 17 + i, sub=1, squash=0.9))  # shadowed core
+        for j in range(3):  # small clumps break up the silhouette
+            a = random.uniform(0, 2 * math.pi)
+            off = Vector((math.cos(a) * big * 0.8, math.sin(a) * big * 0.8, random.uniform(0.0, 0.8)))
+            parts.append(clump(cpos + off, random.uniform(0.75, 1.0), LEAF, seed * 31 + i * 5 + j, sub=2, amt=0.25, squash=0.95))
+    return join(parts, name)
+
+
+BIRCH = mat("Birch", 0xE9E5DB)
+BIRCHMARK = mat("BirchMark", 0x2A2926)
+
+
+def birch(name, seed):
+    random.seed(seed)
+    H = 6.8
+    parts = [shade(prim("cone", loc=(0, 0, H / 2), m=BIRCH, radius1=0.24, radius2=0.08, depth=H, vertices=10), True)]
+    for k in range(22):  # dark bark marks wrapped round the trunk
+        z = random.uniform(0.3, H * 0.8)
+        rr = 0.24 - (0.16 * z / H)
+        a = random.uniform(0, 2 * math.pi)
+        parts.append(box((0.03, random.uniform(0.12, 0.26), random.uniform(0.04, 0.09)), (math.cos(a) * rr, math.sin(a) * rr, z), BIRCHMARK, rot=(0, 0, a)))
+    tops = []
+    for k in range(3):
+        a = k * 2 * math.pi / 3 + random.uniform(-0.4, 0.4)
+        base = Vector((0, 0, random.uniform(3.4, 4.6)))
+        d = Vector((math.cos(a) * 0.6, math.sin(a) * 0.6, 0.8)).normalized()
+        L = random.uniform(1.2, 1.7)
+        limb = prim("cone", loc=base + d * L / 2, m=BIRCH, radius1=0.08, radius2=0.03, depth=L, vertices=6)
+        limb.rotation_euler = d.to_track_quat("Z", "Y").to_euler()
+        activate(limb)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        parts.append(shade(limb, True))
+        tops.append(base + d * L)
+    tops.append(Vector((0, 0, H - 0.2)))
+    for i, t in enumerate(tops):  # tall, airy leaf clumps
+        o = prim("ico", m=LEAF, radius=random.uniform(1.25, 1.5), subdivisions=2, scale=(0.9, 0.9, 1.3))
+        lumpy(o, 0.22, seed * 7 + i)
+        o.location = t + Vector((0, 0, 0.35))
+        parts.append(shade(o, False))
+        o = prim("ico", m=LEAF2, radius=1.05, subdivisions=1, scale=(0.9, 0.9, 1.3))
+        o.location = t + Vector((0, 0, 0.1))
+        parts.append(shade(o, False))
+    return join(parts, name)
+
+
+BERRY = mat("Berry", 0xD8324A)
+FERN = mat("Fern", 0x4E9A3E)
+GRASS = mat("Grass", 0x6DB043)
+
+
+def bush(name, seed, berries=False):
+    random.seed(seed)
+    parts = [clump((0, 0, 0.62), 0.78, LEAF, seed * 3, squash=0.85)]
+    n = 7
+    for j in range(n):
+        a = j / n * 2 * math.pi + random.uniform(-0.2, 0.2)
+        r = random.uniform(0.55, 0.75)
+        parts.append(clump((math.cos(a) * r, math.sin(a) * r, random.uniform(0.38, 0.55)), random.uniform(0.45, 0.62),
+                           LEAF if j % 3 else LEAF2, seed * 7 + j, squash=0.85, amt=0.25))
+    if berries:
+        for k in range(18):
+            a = random.uniform(0, 2 * math.pi)
+            el = random.uniform(0.15, 1.1)
+            rr = 0.95
+            loc = (math.cos(a) * math.cos(el) * rr, math.sin(a) * math.cos(el) * rr, 0.45 + math.sin(el) * 0.75)
+            parts.append(shade(prim("ico", loc=loc, m=BERRY, radius=random.uniform(0.06, 0.09), subdivisions=1), True))
+    return join(parts, name)
+
+
+def blade_fan(name, count, length, width, mtl, spread, seed, curl=0.0):
+    random.seed(seed)
+    parts = []
+    for k in range(count):
+        a = k / count * 2 * math.pi + random.uniform(-0.25, 0.25)
+        L = length * random.uniform(0.7, 1.15)
+        tilt = spread * random.uniform(0.7, 1.2)
+        b = prim("cone", loc=(0, 0, 0), m=mtl, radius1=width, radius2=0.0, depth=L, vertices=3, scale=(1, 0.35, 1))
+        for v in b.data.vertices:  # stand the blade on the origin and arch it outward
+            v.co.z += L / 2
+            t = v.co.z / L
+            v.co.x += curl * t * t * L
+        b.rotation_euler = (0, tilt, a)
+        activate(b)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         parts.append(shade(b, False))
     return join(parts, name)
 
@@ -908,6 +1064,72 @@ def heals():
           box((0.07, 0.21, 0.24), (0, 0, 0.17), REDX), box((0.2, 0.05, 0.04), (0, 0, 0.35), DARK)], "Heal_med")
 
 
+BRASS = mat("Brass", 0xE0AE3C, 0.3)
+BTIP = mat("BulletTip", 0xCDD2D8, 0.25)
+COPPER = mat("Copper", 0xB9653A, 0.3)
+SHELLRED = mat("ShellRed", 0xC8343A, 0.45)
+OLIVE = mat("Olive", 0x8A9630, 0.5)
+STRIPEO = mat("StripeOrange", 0xF06A1E)
+
+
+def placed(parts, rz, loc):
+    """Join parts built around the origin, then turn about Z and move them."""
+    o = join(parts, "tmp")
+    o.rotation_euler = (0, 0, rz)
+    o.location = loc
+    activate(o)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    return o
+
+
+def cartridge(r, length, tip, tip_len, round_nose):
+    """A round lying along +Y with its base at y=0, resting on the ground."""
+    z = r
+    p = [shade(rod(r, length, (0, length / 2, z), BRASS, "y", 16), True)]
+    p.append(shade(rod(r * 1.04, length * 0.06, (0, length * 0.08, z), DARK, "y", 16), True))  # extractor groove
+    if round_nose:
+        p.append(shade(prim("uv", loc=(0, length, z), scale=(1, tip_len / r, 1), m=tip, radius=r * 0.96, segments=16, ring_count=8), True))
+    else:
+        p.append(shade(prim("cone", loc=(0, length + tip_len / 2, z), rot=(-math.pi / 2, 0, 0), m=tip, radius1=r * 0.96, radius2=0.0, depth=tip_len, vertices=16), True))
+    return p
+
+
+def ammo():
+    # light: a fan of short round-nosed pistol rounds
+    join([placed(cartridge(0.04, 0.11, BTIP, 0.05, True), -a, (math.sin(a) * 0.2, math.cos(a) * 0.2 - 0.24, 0)) for a in (-0.9, -0.3, 0.3, 0.9)], "Ammo_light")
+    # medium: three pointed copper-tipped rifle rounds side by side
+    join([placed(cartridge(0.04, 0.2, COPPER, 0.11, False), 0, (x, -0.15, 0)) for x in (-0.1, 0, 0.1)], "Ammo_medium")
+    # heavy: one long necked sniper round
+    r = 0.055
+    p = cartridge(r, 0.36, BTIP, 0.14, False)
+    p[-1].location = (0, 0.36 + 0.16, r)
+    activate(p[-1]); bpy.ops.object.transform_apply(location=True)
+    p.append(shade(prim("cone", loc=(0, 0.39, r), rot=(-math.pi / 2, 0, 0), m=BRASS, radius1=r, radius2=r * 0.62, depth=0.06, vertices=16), True))
+    join([placed(p, 0, (0, -0.26, 0))], "Ammo_heavy")
+    # shells: two red hulls with steel bases
+    def shell():
+        R = 0.065
+        return [shade(rod(R, 0.22, (0, 0.11 + 0.06, R), SHELLRED, "y", 18), True),
+                shade(rod(R * 1.06, 0.07, (0, 0.035, R), BTIP, "y", 18), True),
+                shade(rod(R * 1.12, 0.012, (0, 0.006, R), BTIP, "y", 18), True)]
+    join([placed(shell(), -0.25, (-0.08, -0.14, 0)), placed(shell(), -0.25, (0.1, -0.1, 0))], "Ammo_shells")
+
+    # rockets: olive warheads with a shark face and an orange band
+    def warhead():
+        R = 0.06
+        q = [shade(rod(0.022, 0.36, (0, 0.18, R), OLIVE, "y", 10), True),
+             shade(rod(0.026, 0.04, (0, 0.28, R), STRIPEO, "y", 10), True),
+             shade(prim("cone", loc=(0, 0.02, R), rot=(math.pi / 2, 0, 0), m=OLIVE, radius1=0.035, radius2=0.02, depth=0.05, vertices=10), True),
+             shade(prim("uv", loc=(0, 0.46, R), scale=(1, 1.7, 1), m=OLIVE, radius=R, segments=14, ring_count=8), True),
+             shade(rod(0.02, 0.03, (0, 0.57, R), DARK, "y", 10), True)]
+        for s in (-1, 1):
+            q.append(shade(prim("uv", loc=(s * 0.03, 0.47, R * 1.75), scale=(1, 1.6, 0.4), m=WHITE, radius=0.016, segments=10, ring_count=6), True))
+            q.append(shade(prim("uv", loc=(s * 0.03, 0.475, R * 1.85), scale=(1, 1, 0.4), m=EYE, radius=0.008, segments=8, ring_count=4), True))
+        q.append(box((0.07, 0.02, 0.01), (0, 0.42, R * 1.82), WHITE))  # teeth
+        return q
+    join([placed(warhead(), a, (math.sin(a) * 0.05 + a * 0.08, -0.28, 0)) for a in (-0.35, 0, 0.35)], "Ammo_rockets")
+
+
 def launch_pad():
     p = [bevel(box((1.6, 1.6, 0.16), (0, 0, 0.08), PADBASE), 0.04)]
     p.append(bevel(box((1.3, 1.3, 0.05), (0, 0, 0.18), PADTOP), 0.02))
@@ -956,8 +1178,9 @@ def cliff(name, seed):
 torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
 gun("Gun_tac", tactical); gun("Gun_hunting", hunting); gun("Gun_minigun", minigun); gun("Gun_rocket", rocket_launcher)
-rocket(); heals(); launch_pad(); willow("WillowA", 8); willow("WillowB", 9); cliff("CliffA", 10); cliff("CliffB", 11)
-pine("PineA", 1); pine("PineB", 2); round_tree("RoundA", 3); round_tree("RoundB", 4)
+rocket(); heals(); ammo(); launch_pad(); willow("WillowA", 8); willow("WillowB", 9); cliff("CliffA", 10); cliff("CliffB", 11)
+pine("PineA", 1); pine("PineB", 2); round_tree("RoundA", 3); round_tree("RoundB", 4); birch("BirchA", 14); birch("BirchB", 15)
+bush("BushA", 12); bush("BushB", 13, berries=True); blade_fan("Fern", 9, 1.1, 0.16, FERN, 0.9, 16, curl=0.35); blade_fan("GrassTuft", 7, 0.55, 0.05, GRASS, 0.35, 17)
 rock("RockA", 5); rock("RockB", 6); rock("RockC", 7)
 chest(); airship()
 house(); windmill(); lighthouse(); silo(); water_tower(); container()
@@ -966,7 +1189,7 @@ crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
 # ---------------------------------------------------------------- ambient occlusion
 # Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
 # per-corner colour attribute with Cycles. The game multiplies it into each colour.
-NO_GROUND = ("Gun_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
+NO_GROUND = ("Gun_", "Ammo_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
 
 
 def densify(o, max_edge=1.1, passes=3):
@@ -1019,6 +1242,42 @@ def bake_ao(samples=48, distance=0.9):
 
 
 bake_ao(samples=64, distance=0.7)
+
+LEAFY = {"Leaf", "Leaf2", "Willow", "Fern", "Grass"}
+TINTED = ("Pine", "Round", "Birch", "Bush", "Willow", "Fern", "GrassTuft")
+
+
+def tint_foliage():
+    """Fold sunlit-top / shaded-underside colour into the AO attribute of leaves: warm
+    yellow-green where light hits, cool blue-green underneath, mottled with noise."""
+    for o in bpy.data.objects:
+        if o.type != "MESH" or not o.name.startswith(TINTED):
+            continue
+        me = o.data
+        leafy = [i for i, m in enumerate(me.materials) if m and m.name.split(".")[0] in LEAFY]
+        if not leafy:
+            continue
+        vs = [me.vertices[i].co for p in me.polygons if p.material_index in leafy for i in p.vertices]
+        z0, z1 = min(v.z for v in vs), max(v.z for v in vs)
+        rmax = max(math.hypot(v.x, v.y) for v in vs) or 1
+        ao = me.color_attributes["AO"]
+        for p in me.polygons:
+            if p.material_index not in leafy:
+                continue
+            for li, vi in zip(p.loop_indices, p.vertices):
+                co = me.vertices[vi].co
+                h = (co.z - z0) / max(z1 - z0, 1e-3)
+                rad = math.hypot(co.x, co.y) / rmax
+                n = noise.noise(co * 1.3) * 0.08
+                bright = min(1.0, 0.66 + 0.3 * h ** 0.8 + 0.12 * rad + n)
+                warm = min(1.0, max(0.0, 0.75 * h + 0.35 * rad - 0.15 + n))
+                tint = (0.86 + 0.14 * warm, 1.0, 1.0 - 0.24 * warm)
+                c = ao.data[li].color
+                a = 0.5 + 0.5 * c[0]
+                ao.data[li].color = tuple(max(0.0, min(1.0, 2 * a * bright * t - 1)) for t in tint) + (1.0,)
+
+
+tint_foliage()
 bpy.ops.export_scene.gltf(filepath=GLB, export_format="GLB", export_apply=True, export_yup=True,
                           export_texcoords=False, export_normals=True, use_selection=False,
                           export_vertex_color="ACTIVE")
