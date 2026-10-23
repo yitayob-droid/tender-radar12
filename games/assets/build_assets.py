@@ -380,15 +380,208 @@ def glider():
     return join(parts, "Glider")
 
 
+LEATHER = mat("Leather", 0x5A3A22, 0.6)
+STEEL = mat("Steel", 0xB9C6D2, 0.25)
+
+
+PICKGLASS = mat("PickGlass", 0x5BC0FF, 0.1)
+PICKDEEP = mat("PickGlassDeep", 0x2A78E0, 0.1)
+PICKBLACK = mat("PickBlack", 0x1A1C22, 0.3)
+PICKBLUE = mat("PickBlue", 0x3FA9FF, 0.3)
+
+
+def bez(p0, p1, p2, t):
+    return p0 * (1 - t) ** 2 + p1 * 2 * t * (1 - t) + p2 * t * t
+
+
+def loft(name, n, m_ring, frame, mtls, pick_mat=None):
+    """Loft a closed tube along a path in the YZ plane. frame(t) -> (centre, r_x, r_side) for t in 0..1;
+    a zero radius collapses to a sharp point. pick_mat(face_centre) chooses a material index per face
+    (used for the pixel pattern)."""
+    cs = [frame(i / n) for i in range(n + 1)]
+    bm = bmesh.new()
+    rings = []
+    for i, (c, rx, rn) in enumerate(cs):
+        a = Vector(cs[max(i - 1, 0)][0])
+        b2 = Vector(cs[min(i + 1, n)][0])
+        tan = (b2 - a).normalized()
+        nrm = Vector((0, -tan.z, tan.y)).normalized()
+        c = Vector(c)
+        rings.append([bm.verts.new(c + Vector((1, 0, 0)) * rx * math.cos(k / m_ring * 2 * math.pi) + nrm * rn * math.sin(k / m_ring * 2 * math.pi))
+                      for k in range(m_ring)])
+    for i in range(n):
+        for k in range(m_ring):
+            bm.faces.new((rings[i][k], rings[i][(k + 1) % m_ring], rings[i + 1][(k + 1) % m_ring], rings[i + 1][k]))
+    bm.faces.new(rings[0][::-1])
+    bm.faces.new(rings[-1])
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if pick_mat:
+        for f in bm.faces:
+            f.material_index = pick_mat(f.calc_center_median())
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(o)
+    for m in mtls:
+        me.materials.append(m)
+    return shade(o, True)
+
+
+def pixels(weights, cell=0.042, seed=0):
+    """Blocky digital camo: hash a grid cell to a material index."""
+    total = sum(weights)
+
+    def pick(c):
+        h = (int(math.floor(c.y / cell)) * 73856093) ^ (int(math.floor(c.z / cell)) * 19349663) ^ (int(math.floor(c.x / cell)) * 83492791) ^ seed
+        r = (h & 1023) / 1024 * total
+        for i, w in enumerate(weights):
+            if r < w:
+                return i
+            r -= w
+        return len(weights) - 1
+    return pick
+
+
+def pickaxe_ice():
+    """Digital-ice pickaxe: slim black shaft, translucent blue neck and hub with bolts, a long curved
+    pixel-glass blade sweeping forward and down, and a short dark back spike. Head points along +Y
+    (the character's forward) so the long blade leads the swing."""
+    parts = []
+    # pommel: glass cap with a dark ring
+    parts.append(loft("Pommel", 6, 20, lambda t: ((0, 0, -0.37 + 0.075 * t), 0.037, 0.037), [PICKGLASS, PICKDEEP], pixels([3, 1], 0.03, 5)))
+    parts.append(shade(rod(0.039, 0.02, (0, 0, -0.29), PICKBLACK, "z", 20), True))
+    # shaft
+    parts.append(shade(prim("cone", loc=(0, 0, 0.03), m=PICKBLACK, radius1=0.026, radius2=0.032, depth=0.64, vertices=20), True))
+    random.seed(41)
+    for z in (-0.2, -0.05, 0.12, 0.24):  # little pixel squares on the shaft
+        a = random.uniform(0, 2 * math.pi)
+        parts.append(box((0.018, 0.018, 0.026), (math.cos(a) * 0.029, math.sin(a) * 0.029, z), PICKBLUE, rot=(0, 0, a)))
+    for z in (0.33, 0.37):
+        parts.append(shade(rod(0.037, 0.022, (0, 0, z), PICKBLACK, "z", 20), True))
+    # neck: stepped glass sleeve that flares toward the hub
+    def neck(t):
+        r = 0.04 if t < 0.45 else 0.044 + 0.016 * (t - 0.45) / 0.55
+        return (0, 0, 0.38 + 0.25 * t), r, r
+    parts.append(loft("Neck", 14, 24, neck, [PICKGLASS, PICKDEEP, PICKBLACK], pixels([6, 2, 1], 0.03, 7)))
+    for z in (0.44, 0.54):  # bolts on both sides
+        for sx in (-1, 1):
+            parts.append(shade(rod(0.017, 0.014, (sx * 0.046, 0, z), PICKBLACK, "x", 14), True))
+            for ang in (0.785, -0.785):
+                parts.append(box((0.006, 0.026, 0.005), (sx * 0.054, 0, z), PICKGLASS, rot=(ang, 0, 0)))
+    # hub with a dark button on top
+    parts.append(loft("Hub", 8, 28, lambda t: ((0, 0, 0.62 + 0.16 * t), 0.068, 0.068), [PICKGLASS, PICKDEEP, PICKBLACK], pixels([5, 2, 1], 0.032, 9)))
+    parts.append(shade(rod(0.072, 0.018, (0, 0, 0.635), PICKBLACK, "z", 28), True))
+    btn = prim("uv", loc=(0, 0, 0.785), scale=(1, 1, 0.7), m=PICKBLACK, radius=0.036, segments=16, ring_count=10)
+    parts.append(shade(btn, True))
+    # long blade: forward and curving down to a fine point
+    P0, P1, P2 = Vector((0, 0.05, 0.71)), Vector((0, 0.5, 0.75)), Vector((0, 0.62, 0.13))
+    def blade(t):
+        w = 0.078 * (1 - t) ** 0.7
+        return bez(P0, P1, P2, t), 0.024 * (1 - t) + 0.003, w
+    parts.append(loft("Blade", 36, 12, blade, [PICKGLASS, PICKDEEP, PICKBLACK], pixels([7, 2, 1], 0.045, 3)))
+    # back spike: short, dark, angled up, with blue streaks
+    Q0, Q1, Q2 = Vector((0, -0.05, 0.71)), Vector((0, -0.24, 0.72)), Vector((0, -0.37, 0.88))
+    def spike(t):
+        return bez(Q0, Q1, Q2, t), 0.02 * (1 - t) + 0.003, 0.062 * (1 - t) ** 0.8
+    parts.append(loft("Spike", 20, 12, spike, [PICKBLACK, PICKBLUE], pixels([3, 1], 0.04, 11)))
+    return join(parts, "Pickaxe_Ice")
+
+
 def pickaxe():
-    parts = [shade(rod(0.035, 1.0, (0, 0, 0.2), WOOD, "z", 10), True)]
-    parts.append(shade(rod(0.045, 0.22, (0, 0, -0.18), ACCENT, "z", 10), True))  # grip wrap
-    parts.append(bevel(box((0.12, 0.12, 0.14), (0, 0, 0.7), GUNDARK), 0.02))  # collar
+    """Default: tapered ash handle with a knob, ribbed leather grip, steel collar and a curved head
+    with a spike in front (+Y, leads the swing) and a broad chisel behind."""
+    parts = [shade(prim("cone", loc=(0, 0, 0.2), m=WOOD, radius1=0.042, radius2=0.033, depth=1.04, vertices=20), True)]
+    parts.append(shade(prim("uv", loc=(0, 0, -0.33), scale=(1, 1, 0.8), m=GUNDARK, radius=0.058, segments=16, ring_count=10), True))
+    parts.append(shade(rod(0.047, 0.32, (0, 0, -0.13), LEATHER, "z", 20), True))
+    for k in range(7):  # wrap ridges
+        ADD["torus"](location=(0, 0, -0.27 + k * 0.045), major_radius=0.047, minor_radius=0.009, major_segments=20, minor_segments=6)
+        t = bpy.context.active_object
+        t.data.materials.append(LEATHER)
+        parts.append(shade(t, True))
+    collar = box((0.11, 0.13, 0.17), (0, 0, 0.7), GUNDARK)
+    bevel(collar, 0.025, 3)
+    parts.append(shade(collar, True))
     for sx in (-1, 1):
-        blade = prim("cone", loc=(sx * 0.27, 0, 0.66), rot=(0, sx * math.radians(100), 0), m=METAL,
-                     radius1=0.07, radius2=0.0, depth=0.46, vertices=8)
-        parts.append(blade)
+        parts.append(shade(prim("uv", loc=(sx * 0.058, 0, 0.7), m=STEEL, radius=0.018, segments=10, ring_count=6), True))
+    parts.append(shade(prim("uv", loc=(0, 0, 0.79), scale=(1, 1, 0.5), m=STEEL, radius=0.045, segments=14, ring_count=8), True))
+
+    def head(t):
+        u = t * 2 - 1
+        c = Vector((0, u * 0.5, 0.72 - 0.15 * u * u))
+        if u >= 0:  # spike tapering to a point
+            r = 0.058 * (1 - u) ** 0.85
+            return c, r * 0.85, r
+        w = 1 + u  # chisel: wide across, thin in the swing plane
+        return c, 0.06 * (0.55 + 0.45 * w) + 0.035 * (1 - w), 0.058 * (0.3 + 0.7 * w)
+    parts.append(loft("PickHead", 28, 14, head, [STEEL]))
     return join(parts, "Pickaxe")
+
+
+GOLD = mat("Gold", 0xF4C430, 0.3)
+GOLDDEEP = mat("GoldDeep", 0xC8920E, 0.35)
+EMBLEM = mat("Emblem", 0x34343B, 0.5)
+
+
+def slab(name, pts, thick, m, x=0.0, bev=0.01):
+    """A bevelled slab from (y, z) outline points, facing the side (X)."""
+    o = prism(name, [(x, y, z) for y, z in pts], (1, 0, 0), thick, m)
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(o.data)
+    bm.free()
+    if bev:
+        modify(o, "BEVEL", width=bev, segments=2, limit_method="ANGLE", angle_limit=math.radians(30), use_clamp_overlap=True)
+    shade(o, True)
+    modify(o, "EDGE_SPLIT", split_angle=math.radians(40), use_edge_angle=True, use_edge_sharp=False)
+    return o
+
+
+def pickaxe_gold():
+    """Champion: gold staff with a clawed foot, a shield emblem with a dark lightning bolt, winged
+    blades front and back, a top spike and a laurel wreath around the emblem."""
+    cz = 0.8  # emblem centre
+    parts = [shade(rod(0.027, 0.86, (0, 0, 0.1), GOLD, "z", 20), True)]
+    for z in (-0.25, -0.05, 0.15, 0.36):  # bands down the staff
+        parts.append(shade(rod(0.032, 0.025, (0, 0, z), GOLDDEEP, "z", 20), True))
+    parts.append(shade(prim("cone", loc=(0, 0, -0.36), m=GOLDDEEP, radius1=0.022, radius2=0.04, depth=0.06, vertices=16), True))
+    for k in range(3):  # claw foot
+        a = k * 2 * math.pi / 3
+        claw = prim("cone", loc=(math.cos(a) * 0.035, math.sin(a) * 0.035, -0.43), rot=(math.sin(a) * 0.6, -math.cos(a) * 0.6, 0),
+                    m=GOLD, radius1=0.016, radius2=0.0, depth=0.11, vertices=10)
+        parts.append(shade(claw, True))
+    parts.append(shade(prim("cone", loc=(0, 0, 0.6), m=GOLDDEEP, radius1=0.03, radius2=0.05, depth=0.09, vertices=20), True))
+    shield = [(-0.11, 0.14), (0.11, 0.14), (0.16, 0.05), (0.13, -0.08), (0, -0.19), (-0.13, -0.08), (-0.16, 0.05)]
+    parts.append(slab("Shield", [(y, cz + z) for y, z in shield], 0.07, GOLD, bev=0.012))
+    inner = [(y * 0.74, cz + z * 0.74 - 0.005) for y, z in shield]
+    parts.append(slab("Inset", inner, 0.085, EMBLEM, bev=0.006))
+    bolt = [(-0.06, 0.08), (0.05, 0.08), (0.0, 0.015), (0.055, 0.015), (-0.04, -0.1), (-0.005, -0.015), (-0.055, -0.015)]
+    parts.append(slab("Bolt", [(y, cz + z) for y, z in bolt], 0.1, GOLD, bev=0.004))
+    # winged blades, slightly swept up, with engraved grooves
+    for s in (-1, 1):
+        wing = [(s * 0.13, cz + 0.11), (s * 0.48, cz + 0.06), (s * 0.15, cz - 0.07)]
+        parts.append(slab("Wing", wing, 0.045, GOLD, bev=0.01))
+        for k in range(3):
+            parts.append(box((0.05, 0.05, 0.012), (0, s * (0.2 + k * 0.07), cz + 0.05 - k * 0.012), GOLDDEEP, rot=(s * 0.2, 0, 0)))
+    parts.append(slab("Top", [(-0.07, cz + 0.13), (0.07, cz + 0.13), (0.01, cz + 0.36)], 0.045, GOLD, bev=0.01))
+    # laurel wreath: paired leaves round the lower part of the emblem
+    R = 0.215
+    for k in range(13):
+        a = math.radians(205 + k * 10.8)
+        y, z = math.cos(a) * R, cz - 0.02 + math.sin(a) * R
+        for side in (-1, 1):
+            off = 0.035 * side
+            leaf = prim("uv", loc=(0, y + math.cos(a) * off, z + math.sin(a) * off), scale=(0.35, 1, 0.5), m=GOLD, radius=0.032, segments=10, ring_count=6)
+            leaf.rotation_euler = (a + math.pi / 2 + side * 0.5, 0, 0)
+            activate(leaf)
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+            parts.append(shade(leaf, True))
+    stem = prim("torus", loc=(0, 0, cz - 0.02), rot=(0, math.pi / 2, 0), m=GOLDDEEP, major_radius=R, minor_radius=0.008, major_segments=40, minor_segments=6)
+    keep(stem, lambda c: c.z < cz + 0.04)
+    parts.append(shade(stem, True))
+    return join(parts, "Pickaxe_Gold")
 
 
 # ---------------------------------------------------------------- weapons (barrel along +Y)
@@ -565,7 +758,7 @@ def round_tree(name, seed):
     crowns.append(Vector((0, 0, 5.9)))
     for i, cpos in enumerate(crowns):
         big = 1.95 if i == len(crowns) - 1 else random.uniform(1.55, 1.8)
-        parts.append(clump(cpos, big, LEAF, seed * 13 + i, squash=0.92))
+        parts.append(clump(cpos, big, LEAF, seed * 13 + i, sub=3, squash=0.92))
         parts.append(clump(cpos + Vector((0, 0, -0.3)), big * 0.86, LEAF2, seed * 17 + i, sub=1, squash=0.9))  # shadowed core
         for j in range(3):  # small clumps break up the silhouette
             a = random.uniform(0, 2 * math.pi)
@@ -624,7 +817,7 @@ def bush(name, seed, berries=False):
         a = j / n * 2 * math.pi + random.uniform(-0.2, 0.2)
         r = random.uniform(0.55, 0.75)
         parts.append(clump((math.cos(a) * r, math.sin(a) * r, random.uniform(0.38, 0.55)), random.uniform(0.45, 0.62),
-                           LEAF if j % 3 else LEAF2, seed * 7 + j, squash=0.85, amt=0.25))
+                           LEAF if j % 3 else LEAF2, seed * 7 + j, sub=2, squash=0.85, amt=0.25))
     if berries:
         for k in range(18):
             a = random.uniform(0, 2 * math.pi)
@@ -656,15 +849,16 @@ def blade_fan(name, count, length, width, mtl, spread, seed, curl=0.0):
 
 def rock(name, seed):
     random.seed(seed)
-    r = prim("ico", m=ROCK, radius=1.0, subdivisions=2)
+    r = prim("ico", m=ROCK, radius=1.0, subdivisions=3)
     off = Vector([random.uniform(0, 50) for _ in range(3)])
-    for v in r.data.vertices:
-        n = noise.noise(v.co * 1.4 + off)
-        v.co *= 1 + 0.28 * n
+    for v in r.data.vertices:  # weathered boulder: broad noise plus a few flattened faces
+        n = noise.noise(v.co * 1.2 + off)
+        v.co *= 1 + 0.24 * n
+        for axis, cut in ((0, 0.78), (1, 0.82), (2, 0.7)):
+            if v.co[axis] > cut:
+                v.co[axis] = cut + (v.co[axis] - cut) * 0.3
         v.co.z = max(v.co.z, -0.35)
-    jitter(r, 0.05)
-    modify(r, "DECIMATE", ratio=0.55)
-    return join([shade(r, False)], name)
+    return join([shade(r, True)], name)
 
 
 # ---------------------------------------------------------------- props
@@ -1175,7 +1369,7 @@ def cliff(name, seed):
 
 
 # ---------------------------------------------------------------- build all
-torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe()
+torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); glider(); pickaxe(); pickaxe_ice(); pickaxe_gold()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
 gun("Gun_tac", tactical); gun("Gun_hunting", hunting); gun("Gun_minigun", minigun); gun("Gun_rocket", rocket_launcher)
 rocket(); heals(); ammo(); launch_pad(); willow("WillowA", 8); willow("WillowB", 9); cliff("CliffA", 10); cliff("CliffB", 11)
@@ -1225,7 +1419,7 @@ def bake_ao(samples=48, distance=0.9):
     meshes = [o for o in bpy.data.objects if o.type == "MESH" and o is not ground]
     for o in meshes:
         o.hide_render = True
-        if o.name.startswith(DENSIFY):
+        if o.name.startswith(DENSIFY) and not o.get("dense"):
             densify(o)
     for o in meshes:
         o.hide_render = False
@@ -1239,6 +1433,36 @@ def bake_ao(samples=48, distance=0.9):
     bpy.data.objects.remove(ground)
     for o in meshes:
         o.hide_render = False
+
+
+# ---------------------------------------------------------------- polish
+# Clean, rounded look instead of hard low-poly facets: organic things are smooth-shaded all over;
+# hard-surface things get a small bevel on every sharp edge and smooth shading split at 40 degrees,
+# so flat faces stay crisp while corners catch a soft highlight.
+SMOOTH_ALL = ("Pine", "Round", "Birch", "Bush", "Willow", "Rock", "Cliff")
+FLAT = ("Fern", "GrassTuft")  # thin blades read better flat-shaded
+SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "_ground")
+
+
+def polish():
+    for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+        if o.name.startswith(SKIP) or o.name.startswith(FLAT):
+            continue
+        if o.name.startswith(SMOOTH_ALL):
+            shade(o, True)
+            continue
+        if o.name.startswith(DENSIFY):  # split big faces first so the baked shading stays local
+            densify(o, max_edge=2.2, passes=2)
+            o["dense"] = 1
+        size = max(o.dimensions)
+        w = min(0.04, max(0.006, size * 0.005))
+        shade(o, True)
+        # hardened normals keep flat faces perfectly flat; only the rounded bevel strips shade softly
+        modify(o, "BEVEL", width=w, segments=1 if size > 3 else 2, limit_method="ANGLE", angle_limit=math.radians(35),
+               use_clamp_overlap=True, harden_normals=True)
+
+
+polish()
 
 
 bake_ao(samples=64, distance=0.7)
