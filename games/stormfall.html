@@ -147,45 +147,81 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
 @keyframes royaleIn{from{opacity:0;transform:translateX(-50%) scale(.6)}to{opacity:1;transform:translateX(-50%) scale(1)}}
 .screen#end.win{background:linear-gradient(180deg,rgba(13,11,23,0) 0 30%,rgba(13,11,23,.85) 75%)}
 
-/* lobby */
-.lobby{width:min(1100px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;padding-block:20px;align-items:start}
-.lob-col{display:flex;flex-direction:column;gap:14px;min-width:0}
-.lobby .logo{font-size:clamp(44px,7vw,84px)}
-.locker{position:relative;aspect-ratio:5/5.4;max-width:420px;width:100%;background:radial-gradient(ellipse at 50% 38%,rgba(138,61,255,.55),rgba(23,18,48,.9) 70%);border:1px solid var(--line)}
-#skincv{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
-#skincv:active{cursor:grabbing}
-.arrow{position:absolute;top:44%;width:40px;height:56px;border:0;background:rgba(0,0,0,.35);color:var(--fg);font-family:var(--display);font-size:28px;cursor:pointer}
-.arrow:hover{background:rgba(0,0,0,.6)} .arrow:focus-visible{outline:2px solid #fff}
-.arrow.left{left:8px} .arrow.right{right:8px}
-.skinmeta{position:absolute;left:0;right:0;bottom:12px;display:flex;flex-direction:column;align-items:center;gap:2px;text-shadow:0 2px 0 rgba(0,0,0,.6)}
-.skinmeta b{font-family:var(--display);font-size:26px}
-.skinmeta span{font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
-.skingrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-width:420px}
-.skinbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:var(--panel);border:2px solid transparent;border-bottom:3px solid var(--tier);color:var(--fg);font-family:var(--body);font-weight:700;font-size:12px;cursor:pointer}
-.skinbtn i{width:28px;height:28px;display:block;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
-.skinbtn[aria-pressed="true"]{border-color:#fff;background:rgba(60,40,110,.85)}
-.skinbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.nick{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:13px;color:var(--dim);max-width:420px}
-.nick input{font-family:var(--display);font-size:18px;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--fg)}
-.nick input:focus{outline:2px solid var(--volt);outline-offset:0}
-.playrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.btn2{font-family:var(--display);font-size:16px;background:transparent;color:var(--fg);border:2px solid var(--fg);padding:10px 18px;cursor:pointer}
-.btn2:hover{background:rgba(255,255,255,.1)} .btn2:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
-.btn2:disabled{opacity:.55;cursor:default}
-.btn2.small{font-size:13px;padding:4px 12px;margin-left:auto}
-.mp{background:var(--panel);border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.mp h2{font-family:var(--display);font-size:22px;margin:0}
-.mplist{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto}
-.mprow{display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(0,0,0,.25);min-width:0}
+/* lobby: a 3D night stage behind the panels */
+#menu{background:none;display:block;padding:0;overflow:hidden}
+.stagehit{position:absolute;inset:0;cursor:grab;touch-action:none}
+.stagehit:active{cursor:grabbing}
+#plates{position:absolute;inset:0;pointer-events:none}
+.plate{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translate(-50%,-100%);white-space:nowrap;text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 10px rgba(0,0,0,.5)}
+.plate b{font-family:var(--display);font-size:18px;color:#fff;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.plate span{font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#7dff8a}
+.plate.me b{color:var(--volt)}
+.plate.open b{font-family:var(--body);font-size:13px;font-weight:700;color:rgba(255,255,255,.55)}
+.topbar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:24px;padding:12px 20px;background:linear-gradient(180deg,rgba(6,8,24,.85),rgba(6,8,24,0));z-index:2}
+.brand{font-family:var(--display);font-size:26px;letter-spacing:.02em;color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.5)}
+.brand span{color:var(--volt)}
+.tabs{display:flex;gap:4px}
+.tabs button{font-family:var(--display);font-size:20px;letter-spacing:.04em;text-transform:uppercase;background:none;border:0;color:rgba(255,255,255,.6);padding:8px 16px;cursor:pointer;border-bottom:3px solid transparent}
+.tabs button:hover{color:#fff}
+.tabs button[aria-selected="true"]{color:#fff;border-bottom-color:var(--volt);background:linear-gradient(0deg,rgba(255,210,63,.18),rgba(255,210,63,0))}
+.tabs button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.who{margin-left:auto;display:flex;align-items:center;gap:8px;font-weight:800;background:rgba(0,0,0,.35);padding:6px 12px;min-width:0}
+.who i{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3)}
+.who b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.pane{position:absolute;inset:64px 20px 20px;pointer-events:none}
+.pane[hidden]{display:none}
+.pane>*{pointer-events:auto}
+.lob-left{position:absolute;left:0;bottom:0;width:min(380px,32vw);display:flex;flex-direction:column;gap:10px;background:rgba(8,10,30,.55);padding:14px 16px;backdrop-filter:blur(4px)}
+.lob-left .tag{font-size:15px;color:#e4e0f6}
+.lob-right{position:absolute;right:0;bottom:0;width:min(340px,30vw);display:flex;flex-direction:column;gap:12px}
+.playcard{background:rgba(8,10,30,.7);padding:14px;display:flex;flex-direction:column;gap:10px;backdrop-filter:blur(4px)}
+.playcard .mode{display:flex;flex-direction:column;gap:2px}
+.playcard .mode b{font-family:var(--display);font-size:22px;text-transform:uppercase}
+.playcard .mode span{color:var(--dim);font-size:13px;font-weight:700}
+.btn.play{font-size:38px;padding:14px 0;width:100%;letter-spacing:.06em;text-transform:uppercase;clip-path:polygon(0 0,100% 0,97% 100%,3% 100%)}
+.btn.play[hidden]{display:none}
+.mp{background:rgba(8,10,30,.6);border:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(4px)}
+.mp h2{font-family:var(--display);font-size:20px;margin:0}
+.mplist{display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto}
+.mprow{display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(0,0,0,.3);min-width:0}
 .mprow.me{box-shadow:inset 3px 0 0 var(--volt)}
 .mprow i{width:14px;height:14px;border-radius:50%;flex:none}
 .mprow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .mprow span{color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .mpbtns{display:flex;gap:10px;flex-wrap:wrap}
-.mpbtns .btn{font-size:18px;padding:10px 18px}
-.ctrl summary{cursor:pointer;font-weight:700;color:var(--dim);padding:6px 0}
-.ctrl .controls{margin-top:6px}
-@media (max-width:820px){.lobby{grid-template-columns:minmax(0,1fr)}.locker,.skingrid,.nick{max-width:none}}
+.mpbtns [hidden]{display:none}
+.lockpanel{position:absolute;left:0;top:8px;width:min(420px,38vw);display:flex;flex-direction:column;gap:12px;background:rgba(8,10,30,.6);padding:16px;backdrop-filter:blur(4px)}
+.skinmeta{display:flex;flex-direction:column;gap:2px;text-shadow:0 2px 0 rgba(0,0,0,.6)}
+.skinmeta b{font-family:var(--display);font-size:34px;line-height:1}
+.skinmeta span{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:12px}
+.skingrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.skinbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:rgba(255,255,255,.06);border:2px solid transparent;border-bottom:3px solid var(--tier);color:var(--fg);font-family:var(--body);font-weight:700;font-size:12px;cursor:pointer;min-width:0}
+.skinbtn span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skinbtn i{width:28px;height:28px;display:block;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.skinbtn[aria-pressed="true"]{border-color:#fff;background:rgba(60,40,110,.85)}
+.skinbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.nick{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:13px;color:var(--dim)}
+.nick input{font-family:var(--display);font-size:18px;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--fg)}
+.nick input:focus{outline:2px solid var(--volt);outline-offset:0}
+.arrow{position:absolute;top:45%;width:44px;height:64px;border:0;background:rgba(0,0,0,.4);color:var(--fg);font-family:var(--display);font-size:30px;cursor:pointer}
+.arrow:hover{background:rgba(0,0,0,.65)} .arrow:focus-visible{outline:2px solid #fff}
+.arrow.left{left:calc(min(420px,38vw) + 9vw)} .arrow.right{right:6vw}
+.playrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn2{font-family:var(--display);font-size:16px;background:transparent;color:var(--fg);border:2px solid var(--fg);padding:10px 18px;cursor:pointer}
+.btn2:hover{background:rgba(255,255,255,.1)} .btn2:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
+.btn2:disabled{opacity:.55;cursor:default}
+.btn2.small{font-size:13px;padding:4px 12px;margin-left:auto}
+.ctrl summary{cursor:pointer;font-weight:700;color:var(--dim);padding:4px 0}
+.ctrl .controls{margin-top:6px;max-height:38vh;overflow-y:auto}
+#touchnote{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:3}
+@media (max-width:820px){
+  #menu{overflow-y:auto}
+  .stagehit,#plates{position:fixed}
+  .topbar{position:sticky;flex-wrap:wrap;gap:10px}
+  .pane{position:relative;inset:auto;padding:52vh 16px 16px;display:flex;flex-direction:column;gap:12px}
+  .lob-left,.lob-right,.lockpanel{position:static;width:auto}
+  .arrow{display:none}
+}
 @media (max-width:640px){
   #mini{width:120px;height:120px}
   .slot{width:50px;height:50px} .slot img{width:44px;height:44px}
@@ -244,32 +280,20 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
 </div>
 
 <div class="screen" id="menu">
-  <div class="lobby">
-    <section class="lob-col">
-      <h1 class="logo">STORM<br>FALL</h1>
-      <div class="locker">
-        <canvas id="skincv" aria-label="Your skin, drag to turn it"></canvas>
-        <button class="arrow left" id="skinprev" type="button" aria-label="Previous skin">‹</button>
-        <button class="arrow right" id="skinnext" type="button" aria-label="Next skin">›</button>
-        <div class="skinmeta"><b id="skinname">Blaze</b><span id="skintier">Default</span></div>
-      </div>
-      <div class="skingrid" id="skingrid" aria-label="Skins"></div>
-      <label class="nick" for="nick">Your name <input id="nick" maxlength="16" autocomplete="off" spellcheck="false"></label>
-    </section>
-    <section class="lob-col">
+  <div class="stagehit" id="stagehit" aria-hidden="true"></div>
+  <div id="plates" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">STORM<span>FALL</span></div>
+    <nav class="tabs" role="tablist" aria-label="Lobby sections">
+      <button type="button" role="tab" id="tablobby" aria-selected="true" aria-controls="panelobby">Lobby</button>
+      <button type="button" role="tab" id="tablocker" aria-selected="false" aria-controls="panelocker">Locker</button>
+    </nav>
+    <div class="who"><i id="whoswatch"></i><b id="whoname"></b></div>
+  </header>
+
+  <section class="pane" id="panelobby" role="tabpanel" aria-labelledby="tablobby">
+    <div class="lob-left">
       <p class="tag">Drop onto Thornwick Island, loot the chests, chop wood, build fast, and stay ahead of the storm. One walks away.</p>
-      <div class="playrow"><button class="btn" id="startbtn">Play solo</button><span class="note">You and 49 bots</span></div>
-      <div class="mp">
-        <h2>Multiplayer</h2>
-        <p class="note" id="mpstatus">Connecting to the lobby…</p>
-        <div class="mplist" id="mplist"></div>
-        <div class="mpbtns">
-          <button class="btn2" id="hostbtn" type="button" hidden>Host a match</button>
-          <button class="btn" id="gobtn" type="button" hidden>Start match</button>
-          <button class="btn2" id="leavebtn" type="button" hidden>Leave</button>
-        </div>
-        <p class="note">Matches hold up to 20 players; the host's computer runs bots to fill the rest.</p>
-      </div>
       <details class="ctrl"><summary>Controls</summary>
       <div class="controls">
         <div><span>Move</span><kbd>W A S D</kbd></div>
@@ -288,9 +312,37 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
       </div>
       </details>
       <p class="note">Harvest with the pickaxe (slot 1): trees and crates give wood, rocks give brick, barrels give metal. Every piece costs 10; right-click in build mode to switch material (metal is toughest).</p>
-      <p class="note warn" id="touchnote" hidden>Stormfall needs a keyboard and mouse. Open it on a computer to play.</p>
-    </section>
-  </div>
+    </div>
+    <div class="lob-right">
+      <div class="mp">
+        <h2>Party</h2>
+        <p class="note" id="mpstatus">Connecting to the lobby…</p>
+        <div class="mplist" id="mplist"></div>
+        <div class="mpbtns">
+          <button class="btn2" id="hostbtn" type="button" hidden>Host a match</button>
+          <button class="btn2" id="leavebtn" type="button" hidden>Leave</button>
+        </div>
+        <p class="note">Matches hold up to 20 players; the host's computer runs bots to fill the rest.</p>
+      </div>
+      <div class="playcard">
+        <div class="mode"><b id="modename">Solo</b><span id="modesub">Thornwick Island · you and 49 bots</span></div>
+        <button class="btn play" id="startbtn">Play</button>
+        <button class="btn play" id="gobtn" type="button" hidden>Start match</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane" id="panelocker" role="tabpanel" aria-labelledby="tablocker" hidden>
+    <div class="lockpanel">
+      <div class="skinmeta"><span id="skintier">Default</span><b id="skinname">Blaze</b></div>
+      <div class="skingrid" id="skingrid" aria-label="Skins"></div>
+      <label class="nick" for="nick">Your name <input id="nick" maxlength="16" autocomplete="off" spellcheck="false"></label>
+      <p class="note">Drag your character to turn it.</p>
+    </div>
+    <button class="arrow left" id="skinprev" type="button" aria-label="Previous skin">‹</button>
+    <button class="arrow right" id="skinnext" type="button" aria-label="Next skin">›</button>
+  </section>
+  <p class="note warn" id="touchnote" hidden>Stormfall needs a keyboard and mouse. Open it on a computer to play.</p>
 </div>
 
 <div class="screen" id="pause" hidden>
@@ -2153,7 +2205,7 @@ function renderLobby(){
   const show=(id,on)=>{$(id).hidden=!on;};
   if(!NET.room){
     st.textContent=NET.roomTried?'You aren’t connected to the multiplayer lobby. Sign in to claude.ai, and ask the game’s owner to invite you by email from the Share menu (opening a public link isn’t enough). Solo play still works.':'Connecting to the lobby…';
-    list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);return;
+    list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);show('startbtn',true);playMode();refreshParty();return;
   }
   const people=NET.peers.filter(p=>p.kind==='viewer');
   st.textContent=people.length>1?people.length+' people here. Host a match, or join someone who is hosting.':'You’re connected, but nobody else is here yet. Invite friends by email from the Share menu and have them open this page.';
@@ -2176,7 +2228,13 @@ function renderLobby(){
   });
   list.replaceChildren(...rows);
   show('hostbtn',NET.mode==='idle');show('leavebtn',NET.mode!=='idle');show('gobtn',NET.mode==='hosting');
-  if(NET.mode==='hosting'){const n=joinersOf(NET.me).length;$('gobtn').textContent=n?'Start match ('+(n+1)+' players)':'Start with bots only';}
+  if(NET.mode==='hosting'){const n=joinersOf(NET.me).length;$('gobtn').textContent=n?'Start ('+(n+1)+')':'Start';}
+  show('startbtn',NET.mode==='idle');playMode();refreshParty();
+}
+function playMode(){
+  const n=NET.mode==='hosting'?joinersOf(NET.me).length+1:0;
+  $('modename').textContent=NET.mode==='hosting'?'Squad match':NET.mode==='joined'?'Waiting for host':'Solo';
+  $('modesub').textContent=NET.mode==='hosting'?n+(n===1?' player':' players')+' + bots · Thornwick Island':NET.mode==='joined'?'The match starts when your host presses Start.':'Thornwick Island · you and 49 bots';
 }
 function lobbyCheckStart(){
   if(NET.mode!=='joined'||game!=='menu'||NET.mp)return;
@@ -2211,41 +2269,140 @@ async function connectRoom(){
   }catch(e){NET.roomTried=true;NET.room=null;renderLobby();}
 }
 
-/* ---- 3D skin preview in the lobby (its own small renderer) ---- */
-let preview=null;
-function setupPreview(){
-  const cv=$('skincv');
-  try{
-    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-    const sc=new THREE.Scene();
-    sc.add(new THREE.HemisphereLight(0xf4eeff,0x3a2a5a,.95));
-    const key=new THREE.DirectionalLight(0xffffff,.8);key.position.set(2.5,4,4);sc.add(key);
-    const rim=new THREE.DirectionalLight(0xb88cff,.5);rim.position.set(-3,2,-3);sc.add(rim);
-    const cam=new THREE.PerspectiveCamera(28,1,.1,50);cam.position.set(0,1.35,6.4);cam.lookAt(0,1.1,0);
-    const ped=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.15,.16,48),new THREE.MeshLambertMaterial({color:0x2a2050}));ped.position.y=-.08;sc.add(ped);
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(1.08,.025,8,64),new THREE.MeshBasicMaterial({color:0xffd23f}));ring.rotation.x=Math.PI/2;sc.add(ring);
-    preview={r,sc,cam,model:null,yaw:.5,t:0,drag:null,w:0,h:0};
-    cv.addEventListener('pointerdown',e=>{preview.drag=e.clientX;cv.setPointerCapture(e.pointerId);});
-    cv.addEventListener('pointermove',e=>{if(preview.drag==null)return;preview.yaw+=(e.clientX-preview.drag)*.012;preview.drag=e.clientX;});
-    const up=()=>{preview.drag=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-  }catch(e){preview=null;}
+/* ---- the lobby stage: a night clearing with your party on glowing pedestals (rendered by the main renderer) ---- */
+let stage=null;
+const STAGE_SLOTS=[[0,0,0],[-2.3,0,.5],[2.3,0,.5],[-4.6,0,1.3],[4.6,0,1.3]];
+const FACE=Math.PI; // characters face the stage camera (+Z) at this yaw
+function glowTex(inner,outer){
+  const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,inner);gr.addColorStop(1,outer);g.fillStyle=gr;g.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+function setupStage(){
+  const sc=new THREE.Scene();
+  const sky=document.createElement('canvas');sky.width=4;sky.height=256;const sg=sky.getContext('2d');
+  const gr=sg.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#05071a');gr.addColorStop(.55,'#1b1a4a');gr.addColorStop(.8,'#3b2a6e');gr.addColorStop(1,'#5a3a7e');
+  sg.fillStyle=gr;sg.fillRect(0,0,4,256);sc.background=new THREE.CanvasTexture(sky);
+  sc.fog=new THREE.Fog(0x1f1a48,14,60);
+  sc.add(new THREE.HemisphereLight(0x8f9cff,0x1a1030,.55));
+  const key=new THREE.DirectionalLight(0xdfe6ff,.75);key.position.set(-4,9,10);key.castShadow=true;key.shadow.mapSize.set(1024,1024);
+  Object.assign(key.shadow.camera,{left:-8,right:8,top:6,bottom:-3,near:1,far:40});key.shadow.bias=-.0008;sc.add(key);sc.add(key.target);
+  const rim=new THREE.DirectionalLight(0xb070ff,.6);rim.position.set(3,4,-8);sc.add(rim);
+  const fill=new THREE.PointLight(0xffc27a,.5,14);fill.position.set(0,3,6);sc.add(fill);
+  // ground: a dark meadow with a lit clearing
+  const ground=new THREE.Mesh(new THREE.CircleGeometry(80,48),new THREE.MeshLambertMaterial({color:0x1d3a33}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;sc.add(ground);
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(9,40),new THREE.MeshBasicMaterial({map:glowTex('rgba(120,160,255,.28)','rgba(120,160,255,0)'),transparent:true,depthWrite:false}));
+  pool.rotation.x=-Math.PI/2;pool.position.y=.01;sc.add(pool);
+  // stars and a moon
+  const sp=[];for(let i=0;i<700;i++){const a=Math.random()*TAU,e=.08+Math.random()*1.3,r=70;sp.push(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r-10);}
+  const sgeo=new THREE.BufferGeometry();sgeo.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+  sc.add(new THREE.Points(sgeo,new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,fog:false})));
+  const moon=new THREE.Mesh(new THREE.CircleGeometry(3.2,32),new THREE.MeshBasicMaterial({color:0xf2ecff,fog:false}));moon.position.set(-22,24,-55);sc.add(moon);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('rgba(220,210,255,.5)','rgba(220,210,255,0)'),depthWrite:false,fog:false}));halo.scale.set(22,22,1);halo.position.copy(moon.position);sc.add(halo);
+  // forest ring behind the stage
+  const R=seeded(4242),rr=(a,b)=>a+R()*(b-a);
+  if(ASSETS){
+    for(let i=0;i<46;i++){const a=rr(Math.PI*1.05,Math.PI*1.95),d=rr(11,34),x=Math.cos(a)*d,z=Math.sin(a)*d;
+      const n=R()<.65?(R()<.5?'PineA':'PineB'):(R()<.5?'RoundA':'BirchA'),col=[0x1f4a3a,0x24563f,0x2a5a44][Math.floor(R()*3)];
+      const t=bakedAsset(n,{Leaf:lam(col)},'night'+col);if(!t)continue;t.position.set(x,0,z);t.rotation.y=rr(0,TAU);t.scale.setScalar(rr(.9,1.5));sc.add(t);}
+    for(let i=0;i<14;i++){const a=rr(Math.PI*.95,Math.PI*2.05),d=rr(7,14),r=bakedAsset(['RockA','RockB','RockC'][i%3],null,'');if(!r)continue;
+      r.position.set(Math.cos(a)*d,0,Math.sin(a)*d+2);r.scale.setScalar(rr(.5,1.3));r.rotation.y=rr(0,TAU);sc.add(r);}
+    for(let i=0;i<26;i++){const a=rr(0,TAU),d=rr(4,12),b=bakedAsset(R()<.5?'BushA':'Fern',null,'');if(!b)continue;b.position.set(Math.cos(a)*d,0,Math.sin(a)*d-2);if(b.position.z>-1.5&&Math.abs(b.position.x)<8.5)continue;b.rotation.y=rr(0,TAU);sc.add(b);}
+  }
+  // glowing crystal clusters
+  const crystals=[],glowS=glowTex('rgba(255,255,255,.9)','rgba(255,255,255,0)');
+  for(const [cx,cz,col] of [[-7.5,-3,0x5ff0ff],[7,-4,0xb06bff],[-3.6,-6.5,0xb06bff],[4.2,-7,0x5ff0ff],[-10,1,0x7f8cff],[9.5,0,0x5ff0ff]]){
+    const g=new THREE.Group();g.position.set(cx,0,cz);
+    for(let k=0;k<5;k++){const h=rr(.8,2.2),m=new THREE.Mesh(new THREE.OctahedronGeometry(.35,0),new THREE.MeshBasicMaterial({color:col}));
+      m.scale.set(1,h*1.6,1);m.position.set(rr(-.5,.5),h*.45,rr(-.5,.5));m.rotation.set(rr(-.35,.35),rr(0,3),rr(-.35,.35));g.add(m);}
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowS,color:col,transparent:true,opacity:.55,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.set(4.5,4.5,1);s.position.y=1;g.add(s);
+    const L=new THREE.PointLight(col,.9,7);L.position.y=1.2;g.add(L);sc.add(g);crystals.push({s,L,ph:R()*6});}
+  // fireflies
+  const ff=[];for(let i=0;i<60;i++)ff.push(rr(-12,12),rr(.3,3.5),rr(-10,4));
+  const fgeo=new THREE.BufferGeometry();fgeo.setAttribute('position',new THREE.Float32BufferAttribute(ff,3));
+  const flies=new THREE.Points(fgeo,new THREE.PointsMaterial({color:0xfff2a0,size:3,sizeAttenuation:false,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));sc.add(flies);
+  // pedestals
+  const pedMat=new THREE.MeshLambertMaterial({color:0x2a2752}),pedGeo=new THREE.CylinderGeometry(.95,1.05,.32,40),ringGeo2=new THREE.TorusGeometry(.98,.04,8,64);
+  const beamTex=glowTex('rgba(140,200,255,.55)','rgba(140,200,255,0)');
+  const slots=STAGE_SLOTS.map(([x,y,z],i)=>{
+    const g=new THREE.Group();g.position.set(x,0,z);
+    const ped=new THREE.Mesh(pedGeo,pedMat);ped.position.y=.16;ped.receiveShadow=true;ped.castShadow=true;g.add(ped);
+    const ring=new THREE.Mesh(ringGeo2,new THREE.MeshBasicMaterial({color:i?0x5ff0ff:0xffd23f}));ring.rotation.x=Math.PI/2;ring.position.y=.33;g.add(ring);
+    const disc=new THREE.Mesh(new THREE.CircleGeometry(1.6,32),new THREE.MeshBasicMaterial({map:beamTex,color:i?0x9fd8ff:0xffe08a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+    disc.rotation.x=-Math.PI/2;disc.position.y=.34;g.add(disc);
+    const beam=new THREE.Mesh(new THREE.CylinderGeometry(.9,1,3.4,24,1,true),new THREE.MeshBasicMaterial({color:i?0x5ff0ff:0xffd23f,transparent:true,opacity:.07,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    beam.position.y=2;g.add(beam);
+    sc.add(g);
+    const plate=document.createElement('div');plate.className='plate';plate.innerHTML='<b></b><span></span>';$('plates').appendChild(plate);
+    return {g,ring,disc,beam,plate,model:null,skin:null,yaw:FACE,x,z};
+  });
+  const cam=new THREE.PerspectiveCamera(38,1,.1,200);
+  stage={sc,cam,slots,crystals,flies,t:0,view:'lobby',cx:0,cy:1.9,cz:11,lx:0,ly:1.25,lz:0,drag:null};
+  const hit=$('stagehit');
+  hit.addEventListener('pointerdown',e=>{stage.drag=e.clientX;hit.setPointerCapture(e.pointerId);});
+  hit.addEventListener('pointermove',e=>{if(stage.drag==null)return;stage.slots[0].yaw+=(e.clientX-stage.drag)*.012;stage.drag=e.clientX;});
+  const up=()=>{stage.drag=null;};hit.addEventListener('pointerup',up);hit.addEventListener('pointercancel',up);
+}
+// who stands on the pedestals: you in the middle, then whoever is in your party
+function partyList(){
+  const me={name:LOBBY.nick,skin:LOBBY.skin,status:NET.mode==='hosting'?'Host · Ready':'Ready',me:true};
+  if(!NET.room)return [me];
+  const people=NET.peers.filter(p=>p.kind==='viewer'&&!(p.isMe&&p.sameTab));
+  let others=[];
+  if(NET.mode==='hosting')others=joinersOf(NET.me).filter(p=>!(p.isMe&&p.sameTab));
+  else if(NET.mode==='joined'){const h=people.find(p=>p.peer===NET.joinedTo);if(h)others=[h,...joinersOf(h.peer).filter(p=>!(p.isMe&&p.sameTab))];}
+  return [me,...others.slice(0,STAGE_SLOTS.length-1).map(p=>({name:peerName(p),skin:skinById((p.presence||{}).sk).id,status:p.peer===NET.joinedTo?'Host':'Ready'}))];
+}
+function refreshParty(){
+  if(!stage)return;
+  const list=partyList();
+  stage.slots.forEach((sl,i)=>{
+    const m=list[i];
+    if(m&&sl.skin!==m.skin){if(sl.model)sl.g.remove(sl.model.g);const P=buildCharacter(skinById(m.skin)),g=new THREE.Group();g.add(P.rig);g.position.y=.32;
+      g.traverse(o=>{if(o.isMesh)o.castShadow=true;});sl.model={g,P,ph:i*1.3};sl.g.add(g);sl.skin=m.skin;}
+    if(!m&&sl.model){sl.g.remove(sl.model.g);sl.model=null;sl.skin=null;}
+    sl.ring.material.opacity=m?1:.35;sl.ring.material.transparent=!m;sl.disc.visible=sl.beam.visible=!!m;
+    sl.plate.className='plate'+(m&&m.me?' me':'')+(m?'':' open');
+    sl.plate.firstChild.textContent=m?m.name:(NET.room&&i<3?'Open slot':'');sl.plate.lastChild.textContent=m?m.status:'';
+    sl.plate.hidden=!m&&!(NET.room&&i<3);
+  });
+  const sk=skinById(LOBBY.skin);$('whoname').textContent=LOBBY.nick;$('whoswatch').style.background='#'+sk.suit.toString(16).padStart(6,'0');
+}
+function setTab(t){
+  const locker=t==='locker';
+  $('tablobby').setAttribute('aria-selected',String(!locker));$('tablocker').setAttribute('aria-selected',String(locker));
+  $('panelobby').hidden=locker;$('panelocker').hidden=!locker;if(stage)stage.view=locker?'locker':'lobby';
 }
 function showSkin(id){
   LOBBY.skin=skinById(id).id;store('sf_skin',LOBBY.skin);
   const sk=skinById(LOBBY.skin);
   $('skinname').textContent=sk.name;$('skintier').textContent=sk.tier;$('skintier').style.color=TIER_COLOR[sk.tier];
   for(const b of $('skingrid').children)b.setAttribute('aria-pressed',b.dataset.id===sk.id?'true':'false');
-  if(preview){if(preview.model)preview.sc.remove(preview.model.g);const P=buildCharacter(sk),g=new THREE.Group();g.add(P.rig);preview.model={g,P};preview.sc.add(g);}
-  lobbyPresence();
+  refreshParty();lobbyPresence();
 }
-function renderPreview(dt){
-  if(!preview||!preview.model||$('menu').hidden)return;
-  const cv=preview.r.domElement,w=cv.clientWidth,h=cv.clientHeight;
-  if(w&&h&&(w!==preview.w||h!==preview.h)){preview.w=w;preview.h=h;preview.r.setSize(w,h,false);preview.cam.aspect=w/h;preview.cam.updateProjectionMatrix();}
-  preview.t+=dt;if(preview.drag==null)preview.yaw+=dt*.5;
-  const P=preview.model.P;preview.model.g.rotation.y=preview.yaw;
-  const sw=Math.sin(preview.t*2.2);P.armL.rotation.x=sw*.12;P.armR.rotation.x=-sw*.12+.1;preview.model.g.position.y=Math.abs(Math.sin(preview.t*2.2))*.02;
-  preview.r.render(preview.sc,preview.cam);
+const _pv=new V3();
+function renderStage(dt){
+  if(!stage)return;
+  const st=stage,cam=st.cam,w=innerWidth,h=innerHeight;st.t+=dt;
+  if(cam.aspect!==w/h){cam.aspect=w/h;cam.updateProjectionMatrix();}
+  // lobby: wide on the whole party; locker: close on you, nudged right of the panel
+  const narrow=w<820,lk=st.view==='locker';
+  const tx=lk?(narrow?0:-1.15):0,ty=lk?1.55:2.3,tz=lk?5.2:(narrow?15:12.8),lx=lk?(narrow?0:-1.15):0,ly=lk?1.15:.85;
+  const k=1-Math.exp(-dt*4);st.cx+=(tx-st.cx)*k;st.cy+=(ty-st.cy)*k;st.cz+=(tz-st.cz)*k;st.lx+=(lx-st.lx)*k;st.ly+=(ly-st.ly)*k;
+  cam.position.set(st.cx+Math.sin(st.t*.15)*.15,st.cy,st.cz);cam.lookAt(st.lx,st.ly,0);
+  for(const c of st.crystals){const p=.8+.2*Math.sin(st.t*1.6+c.ph);c.s.material.opacity=.45*p+.1;c.L.intensity=.9*p;}
+  const fp=st.flies.geometry.attributes.position;for(let i=0;i<fp.count;i++){fp.setY(i,fp.getY(i)+Math.sin(st.t*1.3+i)*.004);fp.setX(i,fp.getX(i)+Math.cos(st.t*.7+i*2)*.003);}fp.needsUpdate=true;
+  st.slots.forEach((sl,i)=>{
+    if(sl.model){const P=sl.model.P,t=st.t+sl.model.ph,sw=Math.sin(t*2.2);
+      if(i===0&&st.drag==null&&lk)sl.yaw+=dt*.35;
+      if(i===0&&!lk&&st.drag==null){const d=((sl.yaw-FACE)%TAU+TAU*1.5)%TAU-Math.PI;sl.yaw-=d*Math.min(1,dt*2);}
+      sl.model.g.rotation.y=i?FACE-sl.x*.06:sl.yaw;
+      P.armL.rotation.x=sw*.12;P.armR.rotation.x=-sw*.12+.1;sl.model.g.position.y=.32+Math.abs(Math.sin(t*2.2))*.02;}
+    sl.ring.rotation.z=st.t*.4;
+    // name plate floats above the head
+    const show=!sl.plate.hidden&&!lk;sl.plate.style.display=show?'':'none';
+    if(show){_pv.set(sl.x,3.05,sl.z).project(cam);sl.plate.style.transform=`translate(${(_pv.x*.5+.5)*w}px,${(-_pv.y*.5+.5)*h}px) translate(-50%,-100%)`;}
+  });
 }
 function buildLobby(){
   const grid=$('skingrid');
@@ -2258,11 +2415,12 @@ function buildLobby(){
   const step=d=>{const i=SKINS.findIndex(s=>s.id===LOBBY.skin);showSkin(SKINS[(i+d+SKINS.length)%SKINS.length].id);};
   $('skinprev').addEventListener('click',()=>step(-1));$('skinnext').addEventListener('click',()=>step(1));
   const nick=$('nick');nick.value=LOBBY.nick;
-  nick.addEventListener('input',()=>{LOBBY.nick=cleanName(nick.value);store('sf_nick',LOBBY.nick);lobbyPresence();});
+  nick.addEventListener('input',()=>{LOBBY.nick=cleanName(nick.value)||LOBBY.nick;store('sf_nick',LOBBY.nick);lobbyPresence();refreshParty();});
   $('hostbtn').addEventListener('click',()=>{NET.mode='hosting';NET.go=0;NET.goList=null;lobbyPresence();renderLobby();});
   $('leavebtn').addEventListener('click',()=>{NET.mode='idle';NET.joinedTo=null;lobbyPresence();renderLobby();});
   $('gobtn').addEventListener('click',()=>{initAudio();hostStart();});
-  setupPreview();showSkin(LOBBY.skin);renderLobby();
+  $('tablobby').addEventListener('click',()=>setTab('lobby'));$('tablocker').addEventListener('click',()=>setTab('locker'));
+  setupStage();showSkin(LOBBY.skin);renderLobby();
 }
 
 /* ================= input ================= */
@@ -2361,9 +2519,9 @@ function loop(now){
     menuA+=dt*.05;camera.position.set(Math.cos(menuA)*170,70,Math.sin(menuA)*170);camera.lookAt(0,0,0);
     barge.t+=dt;barge.pos.lerpVectors(barge.from,barge.to,(barge.t%40)/barge.dur);barge.g.position.copy(barge.pos);
     sun.position.set(60,110,40);sun.target.position.set(0,0,0);
-    renderPreview(dt);
+    renderStage(dt);
   }
-  renderer.render(scene,camera);
+  if(game==='menu'&&stage)renderer.render(stage.sc,stage.cam);else renderer.render(scene,camera);
   requestAnimationFrame(loop);
 }
 // load the Blender models, then show an idle menu backdrop: a slowly orbiting camera over a fresh island
@@ -2371,7 +2529,7 @@ const startBtn=$('startbtn');startBtn.disabled=true;startBtn.textContent='Loadin
 loadAssets(()=>{
   makeWorld(Math.floor(Math.random()*1e9));storm={cx:0,cz:0,r:300,phase:0,mode:'wait',t:1e9,nx:0,nz:0,nr:150};updateStorm(0);
   makeIcons();buildLobby();connectRoom();
-  startBtn.disabled=false;startBtn.textContent='Play solo';
+  startBtn.disabled=false;startBtn.textContent='Play';
   last=performance.now();requestAnimationFrame(loop);
 });
 })();
