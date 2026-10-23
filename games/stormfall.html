@@ -264,7 +264,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
         <div><span>Open chest, pick up</span><kbd>E</kbd></div>
         <div><span>Build wall / ramp / floor</span><kbd>Z / X / C</kbd></div>
         <div><span>Toggle build mode</span><kbd>Q</kbd></div>
-        <div><span>Edit: aim at your piece, G, click tiles, G</span><kbd>G or F</kbd></div>
+        <div><span>Edit your piece: G, click/drag tiles, G again (or hold G and let go)</span><kbd>G or F</kbd></div>
         <div><span>Wood ↔ stone (build mode)</span><kbd>Right click</kbd></div>
         <div><span>Look without a mouse</span><kbd>Arrow keys</kbd></div>
       </div>
@@ -1181,9 +1181,24 @@ function makeParts(p){
     addPart(p,m,{min,max});
   }
 }
+function pieceCenter(p,out){
+  if(p.type==='wall')return p.axis==='x'?out.set(p.e*CELL,p.lvl+2,p.o*CELL+2):out.set(p.o*CELL+2,p.lvl+2,p.e*CELL);
+  return out.set(p.cx*CELL+2,p.lvl+(p.type==='ramp'?2:0),p.cz*CELL+2);
+}
 function aimedPiece(c){
   const near=aim(c,_o,_d);const h=firstHit(c,_o,_d,near*.6,near+10);
-  const p=h&&h.object.userData.build;return p&&p.owner===c?p:null;
+  const p=h&&h.object.userData.build;if(p&&p.owner===c)return p;
+  // the over-the-shoulder camera can put the crosshair just off a piece right beside you:
+  // fall back to your closest piece roughly in front of you
+  const fx=-Math.sin(c.yaw),fz=-Math.cos(c.yaw);let best=null,score=1e9;
+  for(const pc of builds.values()){
+    if(pc.owner!==c||pc.dead)continue;pieceCenter(pc,tmpC);
+    const dx=tmpC.x-c.pos.x,dz=tmpC.z-c.pos.z,d=Math.hypot(dx,dz)||.01;
+    if(d>6.5||Math.abs(tmpC.y-(c.pos.y+1))>4.5)continue;
+    const ang=Math.acos(clamp((dx*fx+dz*fz)/d,-1,1));if(ang>1.05&&d>1.5)continue;
+    const sc=d*(1+ang);if(sc<score){score=sc;best=pc;}
+  }
+  return best;
 }
 /* ---- edit mode: G opens a tile grid on your piece, click/drag to cut tiles, G confirms ---- */
 let editing=null; // {piece, sel:Set, hover, drag, tiles:[mesh]}
@@ -2051,13 +2066,18 @@ addEventListener('keydown',e=>{
     case 'KeyC':setBuild('floor');break;
     case 'KeyQ':if(buildPiece)buildPiece=null;else setBuild(lastPiece);break;
     case 'KeyG':case 'KeyF':{if(editing){endEdit(true);break;}if(player.state!=='ground')break;
-      const pc=aimedPiece(player);if(pc)startEdit(pc);else banner('Nothing to edit','Aim at a wall, floor or ramp you built, then press G',1.6);break;}
+      const pc=aimedPiece(player);if(pc){startEdit(pc);editKeyAt=performance.now();}
+      else banner('Nothing to edit','Stand near a wall, floor or ramp you built and press G',1.6);break;}
     case 'KeyE':interact();break;
     case 'KeyR':if(editing)editing.sel.clear();else if(!buildPiece)startReload(player);break;
     case 'Space':if(player.state==='barge')jumpOut(player);break;
   }
 });
-addEventListener('keyup',e=>{keys[e.code]=false;});
+// edit on release: hold G, pick tiles, let go to confirm (a quick tap still opens the grid; tap again to confirm)
+let editKeyAt=0;
+addEventListener('keyup',e=>{keys[e.code]=false;
+  if((e.code==='KeyG'||e.code==='KeyF')&&editKeyAt){const held=performance.now()-editKeyAt;editKeyAt=0;
+    if(editing&&held>350&&editing.sel.size>0)endEdit(true);}});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.l=mouse.r=false;});
 $('startbtn').addEventListener('click',()=>{initAudio();if(NET.mode!=='idle'){NET.mode='idle';lobbyPresence();}newMatch();lock();});
 $('againbtn').addEventListener('click',()=>{initAudio();if(NET.mp)backToLobby();else{newMatch();lock();}});
