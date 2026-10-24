@@ -1693,6 +1693,88 @@ def accessories2():
     join(feathers, "Acc_Wings")
 
 
+# ---------------------------------------------------------------- vehicles (forward = +Y, wheels added by the game)
+CARPAINT = mat("CarPaint", 0xD8323C, 0.35)
+TIRE = mat("Tire", 0x1A1A1E, 0.85)
+RIM = mat("Rim", 0xC9CFD6, 0.25)
+CARGLASS = mat("CarGlass", 0x26333F, 0.1)
+HEADLAMP = mat("Lamp", 0xFFF2C0, 0.2)
+BRAKE = mat("Brake", 0xFF2A2A, 0.3)
+SEAT = mat("Seat", 0x2A2A30, 0.7)
+
+
+def arch_profile(y0, y1, z_bottom, wheels, r, top):
+    """Side outline with semicircular wheel arches; wheels = list of wheel-centre y positions."""
+    pts = [(y1, z_bottom)]
+    for wy in sorted(wheels, reverse=True):
+        pts.append((wy + r, z_bottom))
+        for k in range(1, 8):
+            a = k / 8 * math.pi
+            pts.append((wy + math.cos(a) * r, z_bottom + math.sin(a) * r * 0.95))
+        pts.append((wy - r, z_bottom))
+    pts.append((y0, z_bottom))
+    return pts + top
+
+
+def wheel():
+    tire = prim("cyl", loc=(0, 0, 0), rot=(0, math.pi / 2, 0), m=TIRE, radius=0.36, depth=0.26, vertices=28)
+    bevel(tire, 0.06, 3)
+    parts = [shade(tire, True)]
+    parts.append(shade(prim("cyl", loc=(0.02, 0, 0), rot=(0, math.pi / 2, 0), m=RIM, radius=0.23, depth=0.25, vertices=24), True))
+    parts.append(shade(prim("cyl", loc=(0.14, 0, 0), rot=(0, math.pi / 2, 0), m=GUNDARK, radius=0.06, depth=0.04, vertices=12), True))
+    for k in range(5):
+        a = k / 5 * 2 * math.pi
+        parts.append(box((0.03, 0.05, 0.36), (0.13, 0, 0), RIM, rot=(a, 0, 0)))
+    return join(parts, "Wheel")
+
+
+def car_sport():
+    W = 1.9
+    top = [(-2.15, 0.36), (-2.18, 0.72), (-1.95, 0.86), (-0.9, 0.9), (1.3, 0.88), (2.05, 0.74), (2.22, 0.52)]
+    body = slab("body", arch_profile(-2.15, 2.18, 0.3, (1.35, -1.35), 0.44, top), W, CARPAINT, bev=0.1)
+    p = [body]
+    p.append(slab("cabin", [(-0.95, 0.88), (-0.35, 1.2), (0.72, 1.2), (1.32, 0.87)], 1.62, CARGLASS, bev=0.04))
+    p.append(slab("roof", [(-0.38, 1.16), (0.74, 1.16), (0.7, 1.25), (-0.33, 1.25)], 1.52, CARPAINT, bev=0.03))
+    for sx in (-1, 1):
+        p.append(bevel(box((0.32, 0.1, 0.12), (sx * 0.62, 2.16, 0.62), HEADLAMP), 0.02))
+        p.append(bevel(box((0.36, 0.06, 0.1), (sx * 0.6, -2.17, 0.68), BRAKE), 0.02))
+        p.append(bevel(box((0.08, 0.14, 0.08), (sx * 0.98, 0.95, 0.98), CARPAINT), 0.02))  # mirrors
+        p.append(shade(rod(0.045, 0.2, (sx * 0.35, -2.2, 0.38), STEEL, "y", 12), True))  # exhausts
+        p.append(box((0.05, 0.08, 0.28), (sx * 0.6, -1.95, 0.98), GUNDARK))  # spoiler posts
+        p.append(bevel(box((0.45, 0.5, 0.5), (sx * 0.4, -0.25, 0.62), SEAT), 0.06))  # seats
+    p.append(bevel(box((1.75, 0.38, 0.06), (0, -1.98, 1.12), GUNDARK), 0.02))  # wing
+    p.append(bevel(box((1.0, 0.08, 0.16), (0, 2.18, 0.42), GUNDARK), 0.02))  # grille
+    p.append(bevel(box((1.95, 0.12, 0.08), (0, 2.2, 0.32), GUNDARK), 0.03))  # splitter
+    p.append(box((0.4, 0.06, 0.06), (-0.4, 0.55, 0.85), GUNDARK))  # dash / wheel
+    return join(p, "Car_Sport")
+
+
+def car_truck():
+    W = 2.1
+    lower = slab("lower", arch_profile(-2.5, 2.5, 0.5, (1.6, -1.6), 0.58, [(-2.5, 0.55), (-2.5, 1.22), (2.42, 1.22), (2.55, 0.95), (2.52, 0.6)]), W, CARPAINT, bev=0.08)
+    p = [lower]
+    p.append(slab("cab", [(-0.3, 1.18), (-0.3, 1.98), (0.75, 1.98), (1.18, 1.45), (1.22, 1.18)], 1.96, CARPAINT, bev=0.07))
+    p.append(slab("side_win", [(-0.15, 1.42), (-0.15, 1.88), (0.68, 1.88), (1.0, 1.46)], 1.99, CARGLASS, bev=0.0))
+    p.append(slab("windshield", [(0.74, 1.93), (1.13, 1.47), (1.19, 1.5), (0.8, 1.96)], 1.8, CARGLASS, bev=0.0))
+    p.append(slab("rear_win", [(-0.34, 1.45), (-0.34, 1.85), (-0.28, 1.85), (-0.28, 1.45)], 1.6, CARGLASS, bev=0.0))
+    p.append(box((W - 0.1, 2.15, 0.08), (0, -1.42, 0.88), GUNDARK))  # bed floor
+    for sx in (-1, 1):
+        p.append(bevel(box((0.1, 2.2, 0.42), (sx * (W / 2 - 0.05), -1.42, 1.42), CARPAINT), 0.03))
+        p.append(bevel(box((0.36, 0.1, 0.16), (sx * 0.7, 2.52, 1.02), HEADLAMP), 0.02))
+        p.append(bevel(box((0.1, 0.08, 0.32), (sx * 0.98, -2.52, 1.2), BRAKE), 0.02))
+        p.append(bevel(box((0.1, 0.16, 0.12), (sx * 1.1, 0.75, 1.62), GUNDARK), 0.02))  # mirrors
+        p.append(bevel(box((0.25, 1.6, 0.08), (sx * 1.0, 0.0, 0.55), STEEL), 0.02))  # step rails
+        p.append(bevel(box((0.5, 0.5, 0.55), (sx * 0.45, 0.35, 1.3), SEAT), 0.06))
+    p.append(bevel(box((W, 0.1, 0.42), (0, -2.52, 1.42), CARPAINT), 0.03))  # tailgate
+    p.append(bevel(box((W + 0.1, 0.2, 0.22), (0, 2.6, 0.62), STEEL), 0.04))  # front bumper
+    p.append(bevel(box((W + 0.1, 0.18, 0.18), (0, -2.6, 0.62), STEEL), 0.04))
+    p.append(bevel(box((1.2, 0.08, 0.32), (0, 2.54, 0.98), GUNDARK), 0.02))  # grille
+    p.append(bevel(box((1.3, 0.22, 0.12), (0, 0.25, 2.06), GUNDARK), 0.03))  # light bar
+    for k in range(4):
+        p.append(box((0.22, 0.04, 0.08), (-0.45 + k * 0.3, 0.37, 2.06), HEADLAMP))
+    return join(p, "Car_Truck")
+
+
 # ---------------------------------------------------------------- build all
 torso(); head(); arm(-1); arm(1); leg(-1); leg(1); accessories(); accessories2(); glider(); pickaxe(); pickaxe_ice(); pickaxe_gold()
 gun("Gun_ar", ar); gun("Gun_smg", smg); gun("Gun_shotgun", shotgun); gun("Gun_sniper", sniper); gun("Gun_pistol", pistol)
@@ -1705,11 +1787,12 @@ chest(); airship()
 house(); windmill(); lighthouse(); silo(); water_tower(); container()
 crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
 reeds(); lily("LilyPad", False); lily("LilyFlower", True); campfire(); shack()
+wheel(); car_sport(); car_truck()
 
 # ---------------------------------------------------------------- ambient occlusion
 # Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
 # per-corner colour attribute with Cycles. The game multiplies it into each colour.
-NO_GROUND = ("Gun_", "Ammo_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
+NO_GROUND = ("Gun_", "Wheel", "Ammo_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
 
 
 def densify(o, max_edge=1.1, passes=3):
@@ -1767,7 +1850,7 @@ def bake_ao(samples=48, distance=0.9):
 # so flat faces stay crisp while corners catch a soft highlight.
 SMOOTH_ALL = ("Pine", "Round", "Birch", "Bush", "Willow", "Rock", "Cliff")
 FLAT = ("Fern", "GrassTuft")  # thin blades read better flat-shaded
-SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "Gun_", "Reeds", "Lily", "Campfire", "_ground")
+SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "Gun_", "Car_", "Wheel", "Reeds", "Lily", "Campfire", "_ground")
 
 
 def polish():
