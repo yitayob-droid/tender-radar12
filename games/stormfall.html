@@ -2272,7 +2272,9 @@ function updatePlayer(dt){
     let speed=sprinting?10.6:crouch?4.2:7.6;
     if(wading)speed*=.6;
     if(p.aiming)speed=crouch?3.6:4.8;if(p.using)speed=3.5;
-    if(p.onGround){p.vel.x=vx*speed;p.vel.z=vz*speed;if(keys.Space&&!crouch){p.vel.y=10.2;p.onGround=false;}}
+    p.coyote=p.onGround?.12:(p.coyote||0)-dt;
+    if(p.onGround||p.coyote>0){const k=Math.min(1,dt*(l>0?14:18));p.vel.x=lerp(p.vel.x,vx*speed,k);p.vel.z=lerp(p.vel.z,vz*speed,k);
+      if(keys.Space&&!crouch&&p.vel.y<=.01){p.vel.y=10.2;p.onGround=false;p.coyote=0;}}
     else{const cur=Math.hypot(p.vel.x,p.vel.z),tgt=Math.max(speed,Math.min(cur,16));  // keep momentum from a slide jump
       p.vel.x=lerp(p.vel.x,vx*tgt,Math.min(1,dt*(cur>speed+.5?1.2:4)));p.vel.z=lerp(p.vel.z,vz*tgt,Math.min(1,dt*(cur>speed+.5?1.2:4)));}
     p.pose=crouch?3:sprinting&&l>0?1:0;
@@ -2721,7 +2723,7 @@ function renderLobby(){
   const st=$('mpstatus'),list=$('mplist');
   const show=(id,on)=>{$(id).hidden=!on;};
   if(!NET.room){
-    st.textContent=NET.roomTried?'Couldn’t reach the online lobby, so multiplayer is off for now. Check your connection and reload; solo play still works.':'Connecting to the online lobby…';
+    st.textContent=NET.roomTried?'Still trying to reach the online lobby… it keeps retrying by itself. Solo play works in the meantime.':'Connecting to the online lobby…';
     $('roomrow').hidden=true;list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);show('startbtn',true);playMode();refreshParty();return;
   }
   const people=NET.peers.filter(p=>p.kind==='viewer');
@@ -2782,7 +2784,7 @@ const cleanCode=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,
 function roomCode(){try{return cleanCode(new URLSearchParams(location.search).get('room'))||'public';}catch(e){return 'public';}}
 async function p2pRoom(code){
   const T=await import(P2P_LIB);
-  const room=T.joinRoom({appId:P2P_APP},'lobby-'+code),me=T.selfId;
+  const room=T.joinRoom({appId:P2P_APP,relayConfig:{redundancy:8,warnOnRelayFailure:false}},'lobby-'+code),me=T.selfId;
   const peers=new Map(),subs=[];let mine={},open=true;
   const mk=(peer,pr,isMe)=>({peer,isMe,sameTab:isMe,kind:'viewer',presence:pr});
   peers.set(me,mk(me,{},true));
@@ -2812,25 +2814,35 @@ function attachRoom(room){
     if(game==='menu')renderLobby();
     lobbyCheckStart();
     if(NET.mp){for(const p of ch.joined.concat(ch.updated))if(!p.sameTab)netPeer(p);for(const p of ch.left)netGone(p.peer);}
-  },()=>{if(NET.room===room){NET.room=null;renderLobby();}});
+  },()=>{if(NET.room===room){NET.room=null;renderLobby();if(!NET.mp)setTimeout(()=>{if(!NET.room)connectRoom();},2000);}});
   lobbyPresence();renderLobby();
 }
 // Prefer the online (Trystero) lobby so friends on any link can meet; inside claude.ai, fall back to
 // the built-in room if the page can't reach the relays.
+let connectGen=0;
 async function connectRoom(code){
+  const gen=++connectGen;
   NET.transport=null;NET.roomTried=false;renderLobby();
-  let room=null;
+  let pending=null;
   try{
-    const r=await p2pRoom(code||roomCode());
-    for(let i=0;i<40&&!r.relaysUp();i++)await new Promise(f=>setTimeout(f,200));
-    if(r.relaysUp()){room=r;NET.transport='p2p';}else r.leave();
+    const r=await p2pRoom(code||roomCode());pending=r;
+    for(let i=0;i<60&&!r.relaysUp();i++)await new Promise(f=>setTimeout(f,200));
+    if(gen!==connectGen){r.leave();return;}
+    if(r.relaysUp()){NET.transport='p2p';NET.roomTried=true;attachRoom(r);return;}
   }catch(e){}
-  if(!room){
-    try{const cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;if(cr){room=cr;NET.transport='claude';}}catch(e){}
+  if(gen!==connectGen){if(pending)pending.leave();return;}
+  let cr=null;
+  try{cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;}catch(e){}
+  if(gen!==connectGen){if(pending)pending.leave();return;}
+  if(cr){NET.transport='claude';NET.roomTried=true;attachRoom(cr);}
+  // keep trying the online lobby in the background: relays can be slow to answer, and it is the one friends can join
+  if(pending){
+    for(let i=0;i<150;i++){await new Promise(f=>setTimeout(f,2000));
+      if(gen!==connectGen||NET.mp){if(gen!==connectGen)pending.leave();return;}
+      if(pending.relaysUp()&&game==='menu'){NET.mode='idle';NET.joinedTo=null;NET.transport='p2p';NET.roomTried=true;attachRoom(pending);return;}}
+    pending.leave();
   }
-  NET.roomTried=true;
-  if(!room){NET.room=null;renderLobby();return;}
-  attachRoom(room);
+  if(!NET.room){NET.roomTried=true;renderLobby();setTimeout(()=>{if(gen===connectGen&&!NET.room&&!NET.mp)connectRoom(code);},5000);}
 }
 async function switchRoom(code){
   if(NET.mp||game!=='menu')return;
