@@ -215,10 +215,10 @@ def head():
     subsurf(h, 2)
     parts.append(shade(h, True))
     for x in (-0.092, 0.092):
-        parts.append(shade(prim("uv", loc=(x, 0.2, 1.95), scale=(1, 0.7, 1.15), m=WHITE, radius=0.055, segments=14, ring_count=10), True))
-        parts.append(shade(prim("uv", loc=(x, 0.232, 1.95), m=IRIS, radius=0.032, segments=12, ring_count=8), True))
-        parts.append(shade(prim("uv", loc=(x, 0.252, 1.95), m=EYE, radius=0.017, segments=10, ring_count=6), True))
-        parts.append(shade(prim("uv", loc=(x + (0.012 if x > 0 else -0.012), 0.262, 1.962), m=WHITE, radius=0.007, segments=6, ring_count=4), True))
+        parts.append(shade(prim("uv", loc=(x, 0.2, 1.95), scale=(1, 0.6, 1.1), m=WHITE, radius=0.046, segments=14, ring_count=10), True))
+        parts.append(shade(prim("uv", loc=(x, 0.222, 1.95), m=IRIS, radius=0.027, segments=12, ring_count=8), True))
+        parts.append(shade(prim("uv", loc=(x, 0.238, 1.95), m=EYE, radius=0.015, segments=10, ring_count=6), True))
+        parts.append(shade(prim("uv", loc=(x + (0.012 if x > 0 else -0.012), 0.25, 1.96), m=WHITE, radius=0.006, segments=6, ring_count=4), True))
         brow = box((0.1, 0.025, 0.024), (x, 0.222, 2.03), HAIR, rot=(0, -0.18 if x < 0 else 0.18, 0))
         parts.append(bevel(brow, 0.008))
         parts.append(shade(prim("uv", loc=(x * 2.65, 0, 1.93), scale=(0.6, 1, 1), m=SKIN, radius=0.07, segments=10, ring_count=8), True))  # ears
@@ -236,31 +236,36 @@ def head():
 
 
 def arm(side):
+    """Upper arm (origin at the shoulder) and forearm with hand (origin at the elbow), so the game can bend the elbow."""
     x = 0.44 * side
+    n = "L" if side < 0 else "R"
     parts = [shade(prim("uv", loc=(x, 0, 1.56), m=SUIT, radius=0.15, segments=16, ring_count=10), True)]
-    upper = prim("cone", loc=(x, 0, 1.38), m=SUIT, radius1=0.098, radius2=0.118, depth=0.4, vertices=16)
-    parts.append(shade(upper, True))  # thicker at the shoulder, tapering to the elbow
-    parts.append(shade(rod(0.1, 0.07, (x, 0, 1.17), ACCENT, "z", 14), True))  # cuff
-    fore = prim("cone", loc=(x, 0, 1.02), m=SKIN, radius1=0.075, radius2=0.092, depth=0.28, vertices=14)
-    parts.append(shade(fore, True))
+    parts.append(shade(prim("cone", loc=(x, 0, 1.38), m=SUIT, radius1=0.098, radius2=0.118, depth=0.4, vertices=16), True))
+    parts.append(shade(prim("uv", loc=(x, 0, 1.18), m=SUIT, radius=0.1, segments=14, ring_count=10), True))  # elbow
+    join(parts, "Arm" + n, origin=(x, 0, 1.56))
+    parts = [shade(rod(0.1, 0.07, (x, 0, 1.13), ACCENT, "z", 14), True)]  # cuff
+    parts.append(shade(prim("cone", loc=(x, 0, 1.0), m=SKIN, radius1=0.075, radius2=0.094, depth=0.3, vertices=14), True))
     hand = box((0.15, 0.18, 0.18), (x, 0.01, 0.83), GLOVE)
     subsurf(hand, 2)
     parts.append(shade(hand, True))
-    thumb = prim("uv", loc=(x - 0.07 * side, 0.06, 0.87), scale=(0.7, 0.7, 1.3), m=GLOVE, radius=0.04, segments=10, ring_count=6)
-    parts.append(shade(thumb, True))
-    return join(parts, "ArmL" if side < 0 else "ArmR", origin=(x, 0, 1.56))
+    parts.append(shade(prim("uv", loc=(x - 0.07 * side, 0.06, 0.87), scale=(0.7, 0.7, 1.3), m=GLOVE, radius=0.04, segments=10, ring_count=6), True))
+    return join(parts, "Fore" + n, origin=(x, 0, 1.18))
 
 
 def leg(side):
+    """Thigh (origin at the hip) and shin with boot (origin at the knee)."""
     x = 0.16 * side
+    n = "L" if side < 0 else "R"
     parts = [shade(prim("cone", loc=(x, 0, 0.62), m=PANTS, radius1=0.12, radius2=0.145, depth=0.42, vertices=14), True)]
-    parts.append(shade(prim("cone", loc=(x, 0, 0.3), m=PANTS, radius1=0.11, radius2=0.125, depth=0.36, vertices=14), True))
-    parts.append(shade(bevel(box((0.17, 0.07, 0.15), (x, 0.1, 0.45), ACCENT), 0.03, 2), True))  # knee pad
+    parts.append(shade(prim("uv", loc=(x, 0, 0.43), m=PANTS, radius=0.122, segments=14, ring_count=10), True))  # knee
+    join(parts, "Leg" + n, origin=(x, 0, 0.8))
+    parts = [shade(prim("cone", loc=(x, 0, 0.29), m=PANTS, radius1=0.11, radius2=0.122, depth=0.34, vertices=14), True)]
+    parts.append(shade(bevel(box((0.17, 0.07, 0.15), (x, 0.1, 0.43), ACCENT), 0.03, 2), True))  # knee pad
     parts.append(shade(bevel(box((0.22, 0.34, 0.17), (x, 0.05, 0.085), BOOT), 0.06, 3), True))
     parts.append(box((0.23, 0.36, 0.035), (x, 0.05, 0.017), DARK))  # sole
     for z in (0.12, 0.16):  # laces
         parts.append(box((0.1, 0.02, 0.015), (x, 0.205, z), WHITE))
-    return join(parts, "LegL" if side < 0 else "LegR", origin=(x, 0, 0.8))
+    return join(parts, "Shin" + n, origin=(x, 0, 0.43))
 
 
 def accessories():
@@ -1792,7 +1797,7 @@ wheel(); car_sport(); car_truck()
 # ---------------------------------------------------------------- ambient occlusion
 # Bake soft contact shadows (creases, overhangs, where things meet the ground) into a
 # per-corner colour attribute with Cycles. The game multiplies it into each colour.
-NO_GROUND = ("Gun_", "Wheel", "Ammo_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "Hat_", "Head")
+NO_GROUND = ("Gun_", "Wheel", "Ammo_", "Rocket", "Heal_", "Pickaxe", "Glider", "Airship", "Prop", "MillBlades", "Boat", "ArmL", "ArmR", "ForeL", "ForeR", "Hat_", "Head")
 
 
 def densify(o, max_edge=1.1, passes=3):
@@ -1850,7 +1855,7 @@ def bake_ao(samples=48, distance=0.9):
 # so flat faces stay crisp while corners catch a soft highlight.
 SMOOTH_ALL = ("Pine", "Round", "Birch", "Bush", "Willow", "Rock", "Cliff")
 FLAT = ("Fern", "GrassTuft")  # thin blades read better flat-shaded
-SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Hat_", "Acc_", "Glider", "Pickaxe", "Gun_", "Car_", "Wheel", "Reeds", "Lily", "Campfire", "_ground")
+SKIP = ("Torso", "Head", "ArmL", "ArmR", "LegL", "LegR", "Fore", "Shin", "Hat_", "Acc_", "Glider", "Pickaxe", "Gun_", "Car_", "Wheel", "Reeds", "Lily", "Campfire", "_ground")
 
 
 def polish():
