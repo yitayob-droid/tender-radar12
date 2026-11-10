@@ -1202,12 +1202,15 @@ function physics(c,dt){
   p.x+=dx;collideAxis(c,0,dx);p.z+=dz;collideAxis(c,2,dz);
   const r=Math.hypot(p.x,p.z);if(r>ISLAND){p.x*=ISLAND/r;p.z*=ISLAND/r;}
   const was=c.onGround;
-  if(c.state!=='sky')c.vel.y=Math.max(-60,c.vel.y-GRAV*dt);
+  // the player falls faster than they rise, so jumps are snappy rather than floaty
+  if(c.state!=='sky')c.vel.y=Math.max(-60,c.vel.y-GRAV*dt*(c.isPlayer&&c.vel.y<0?1.45:1));
+  const fallV=c.vel.y;
   let ny=p.y+c.vel.y*dt;
   if(c.vel.y>0){for(const b of colliders){if(p.x<b.min.x-.3||p.x>b.max.x+.3||p.z<b.min.z-.3||p.z>b.max.z+.3)continue;
     if(b.min.y>=p.y+HEIGHT-.05&&ny+HEIGHT>b.min.y){ny=b.min.y-HEIGHT;c.vel.y=0;}}}
   const s=supportAt(p.x,p.z,p.y);
-  if(ny<=s.h||(was&&c.vel.y<=0&&p.y-s.h<.7&&c.state==='ground')){ny=s.h;if(c.vel.y<0)c.vel.y=0;c.onGround=true;c.groundRamp=s.ramp;}
+  if(ny<=s.h||(was&&c.vel.y<=0&&p.y-s.h<.7&&c.state==='ground')){ny=s.h;if(c.vel.y<0)c.vel.y=0;c.onGround=true;c.groundRamp=s.ramp;
+    if(!was&&fallV<-6&&c.state==='ground'){c.land=Math.min(1,-fallV/22);if(c.mesh&&c.mesh.visible&&camera.position.distanceToSquared(p)<1600)dust(p,c.land);}}
   else{c.onGround=false;c.groundRamp=null;}
   p.y=ny;
   return s;
@@ -1837,14 +1840,38 @@ function updateRockets(dt){
   }
 }
 const puffGeo=new THREE.IcosahedronGeometry(.22,0);
+const dustGeo=new THREE.IcosahedronGeometry(.3,1);
+function dust(at,k){for(let i=0;i<4+Math.round(k*6);i++){const a=i/6*TAU+rand(-.3,.3),m=new THREE.Mesh(dustGeo,new THREE.MeshLambertMaterial({color:0xd9ccaa,transparent:true,opacity:.55,depthWrite:false}));
+  m.position.set(at.x+Math.cos(a)*.45,at.y+.15,at.z+Math.sin(a)*.45);world.add(m);fx.push({type:'dust',m,t:.5,life:.5,s:.7+k});}}
 function puff(at){const m=new THREE.Mesh(puffGeo,new THREE.MeshBasicMaterial({color:0xd8d4cc,transparent:true,opacity:.6,depthWrite:false}));
   m.position.copy(at);world.add(m);fx.push({type:'puff',m,t:.7,life:.7});}
+const ballGeo=new THREE.IcosahedronGeometry(1,2),ringGeo2=new THREE.RingGeometry(.8,1,40),chunkGeo=new THREE.BoxGeometry(.3,.22,.26);
+const boomLight=new THREE.PointLight(0xffa040,0,40,2);
 function explode(at,owner,dmg,visualOnly){
-  // fireball, shock flash and debris
-  const fb=new THREE.Mesh(flashGeo,glow(0xffa53a,.95));fb.position.copy(at);fb.scale.setScalar(.6);world.add(fb);fx.push({type:'boom',m:fb,t:.45,life:.45});
-  burst(at,0xff8a2a,14);burst(at,0x5a5248,8);
+  // white-hot flash, then a rolling fireball of overlapping orange balls
+  const fl=new THREE.Mesh(ballGeo,glow(0xfff4d0,1));fl.position.copy(at);fl.scale.setScalar(1.2);world.add(fl);fx.push({type:'xflash',m:fl,t:.16,life:.16});
+  for(let i=0;i<9;i++){const m=new THREE.Mesh(ballGeo,glow([0xffb030,0xff7a1a,0xffd060][i%3],.9));
+    m.position.set(at.x+rand(-1,1),at.y+rand(-.4,1.2),at.z+rand(-1,1));world.add(m);
+    fx.push({type:'fire',m,t:rand(.45,.75),life:.7,s:rand(1.3,2.4),v:new V3(rand(-1.5,1.5),rand(1.5,4),rand(-1.5,1.5))});}
+  // shockwave ring along the ground
+  const ring=new THREE.Mesh(ringGeo2,new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false,fog:false}));
+  ring.rotation.x=-Math.PI/2;ring.position.set(at.x,Math.max(at.y-.8,supportAt(at.x,at.z,at.y).h+.1),at.z);world.add(ring);fx.push({type:'shock',m:ring,t:.45,life:.45});
+  // dark smoke that billows up after the fire
+  for(let i=0;i<10;i++){const m=new THREE.Mesh(ballGeo,new THREE.MeshLambertMaterial({color:[0x3a3632,0x55504a,0x2a2724][i%3],transparent:true,opacity:0,depthWrite:false}));
+    m.position.set(at.x+rand(-1.4,1.4),at.y+rand(0,1.5),at.z+rand(-1.4,1.4));m.scale.setScalar(.5);world.add(m);
+    fx.push({type:'smoke',m,t:rand(1.8,2.6),life:2.6,d:rand(.15,.35),v:new V3(rand(-.6,.6),rand(1.6,3),rand(-.6,.6)),s:rand(1.6,2.8)});}
+  // glowing sparks and tumbling debris
+  for(let i=0;i<16;i++){const m=new THREE.Mesh(fxBox,glow(0xffc040,1));m.position.copy(at);world.add(m);
+    fx.push({type:'p',m,v:new V3(rand(-14,14),rand(4,16),rand(-14,14)),t:rand(.4,.9)});}
+  for(let i=0;i<10;i++){const m=new THREE.Mesh(chunkGeo,lam(pick([0x4a4038,0x6b5a48,0x3a3a3a])));m.position.copy(at);m.castShadow=true;world.add(m);
+    fx.push({type:'chunk',m,v:new V3(rand(-9,9),rand(6,13),rand(-9,9)),r:new V3(rand(-9,9),rand(-9,9),rand(-9,9)),t:rand(1.1,1.6),life:1.6});}
+  // a burst of light on everything nearby
+  if(!boomLight.parent)scene.add(boomLight);boomLight.position.copy(at);boomLight.intensity=6;boomT=.5;
   sfx('boom',volAt(at));
-  if(player&&player.alive){const d=player.pos.distanceTo(at);if(d<25)shakeT=Math.max(shakeT,.5*(1-d/25));}
+  if(player&&player.alive){const d=player.pos.distanceTo(at);if(d<40)shakeT=Math.max(shakeT,.9*(1-d/40));}
+  // the blast throws people (and you) outward
+  for(const c of chars){if(!c.alive||c.state!=='ground'||c.vehicle||c.remote)continue;tmpA.set(c.pos.x,c.pos.y+1,c.pos.z).sub(at);const d=tmpA.length();
+    if(d<6.5){const f=(1-d/6.5)*14;tmpA.normalize();c.vel.x+=tmpA.x*f;c.vel.z+=tmpA.z*f;c.vel.y=Math.max(c.vel.y,6+f*.5);c.onGround=false;}}
   if(visualOnly)return;
   const R=4.5;
   for(const c of chars){if(!c.alive||c.state==='barge')continue;
@@ -1853,7 +1880,7 @@ function explode(at,owner,dmg,visualOnly){
   for(const pc of [...builds.values()]){pieceCenter(pc,tmpA);if(tmpA.distanceTo(at)<R+1.5)damageBuild(pc,400);}
   for(const r of [...resources]){if(Math.hypot(r.x-at.x,r.z-at.z)<R&&at.y<8)damageRes(r,160,owner,false,at);}
 }
-let shakeT=0;
+let shakeT=0,boomT=0;
 function placePad(c,it,fromNet){
   // lay the pad flat on whatever is under the spot just in front of you
   const fx=-Math.sin(c.yaw),fz=-Math.cos(c.yaw),x=c.pos.x+fx*2.4,z=c.pos.z+fz*2.4,y=supportAt(x,z,c.pos.y+1).h;
@@ -1965,7 +1992,9 @@ function muzzleFlash(at,s){
   const m=new THREE.Mesh(flashGeo,glow(0xffe08a,.95));m.position.copy(at);m.scale.setScalar(rand(.16,.24)*s);m.rotation.set(rand(0,TAU),rand(0,TAU),0);world.add(m);
   fx.push({type:'flash',m,t:.05});
 }
+const _ember=new THREE.Color(0xc0300a);
 function updateFx(dt){
+  if(boomT>0){boomT-=dt;boomLight.intensity=Math.max(0,boomT/.5)*6;}
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];
     if(f.type==='collapse'){f.t-=dt;if(f.t<=0){killPiece(f.piece);fx.splice(i,1);}continue;}
     if(f.type==='grow'){f.t+=dt*7;const s=Math.min(1,.2+f.t);for(const part of f.piece.parts)part.m.scale.set(s,s,s);if(s>=1)fx.splice(i,1);continue;}
@@ -1976,8 +2005,18 @@ function updateFx(dt){
     else if(f.type==='flash'){f.m.scale.multiplyScalar(1.15);}
     else if(f.type==='puff'){f.m.scale.multiplyScalar(1+dt*2.2);f.m.material.opacity=.6*Math.max(0,f.t/f.life);f.m.position.y+=dt*.6;}
     else if(f.type==='beamout'){const k=f.t/f.life;f.m.scale.set(.25+k*.9,1,.25+k*.9);f.m.material.opacity=.55*Math.min(1,k*2.5);}
+    else if(f.type==='xflash'){const k=1-f.t/f.life;f.m.scale.setScalar(1.2+k*4);f.m.material.opacity=1-k;}
+    else if(f.type==='fire'){const k=1-f.t/f.life;f.m.position.addScaledVector(f.v,dt);f.v.multiplyScalar(1-dt*2);f.m.scale.setScalar(f.s*(.5+Math.min(1,k*3)*.8));
+      f.m.material.opacity=.9*Math.min(1,f.t/f.life*2.2);f.m.material.color.lerp(_ember,dt*2.5);}
+    else if(f.type==='shock'){const k=1-f.t/f.life;f.m.scale.setScalar(1+k*11);f.m.material.opacity=.9*(1-k);}
+    else if(f.type==='smoke'){const age=f.life-f.t;if(age>f.d){f.m.position.addScaledVector(f.v,dt);f.v.y*=1-dt*.5;f.m.scale.setScalar(Math.min(f.s,.5+(age-f.d)*2.2));
+      f.m.material.opacity=.75*Math.min(1,(age-f.d)*4)*Math.min(1,f.t/1.2);}}
+    else if(f.type==='chunk'){f.v.y-=26*dt;f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=f.r.x*dt;f.m.rotation.y+=f.r.y*dt;
+      const g=supportAt(f.m.position.x,f.m.position.z,f.m.position.y+.5).h+.1;if(f.m.position.y<g){f.m.position.y=g;f.v.y*=-.35;f.v.x*=.6;f.v.z*=.6;f.r.multiplyScalar(.6);}
+      if(f.t<.3)f.m.scale.setScalar(Math.max(.01,f.t/.3));}
+    else if(f.type==='dust'){const k=1-f.t/f.life;f.m.scale.setScalar(f.s*(.4+k*1.2));f.m.material.opacity=.55*(1-k);f.m.position.y+=dt*.4;}
     else if(f.type==='boom'){const k=1-f.t/f.life;f.m.scale.setScalar(.6+k*6);f.m.material.opacity=.95*(1-k);}
-    if(f.t<=0){world.remove(f.m);if(f.m.material.blending===THREE.AdditiveBlending||f.type==='puff')f.m.material.dispose();fx.splice(i,1);}
+    if(f.t<=0){world.remove(f.m);if(f.m.material.blending===THREE.AdditiveBlending||f.type==='puff'||f.type==='smoke'||f.type==='shock'||f.type==='dust')f.m.material.dispose();fx.splice(i,1);}
   }
 }
 const floatsEl=$('floats');
@@ -2223,11 +2262,14 @@ function tickChar(c,dt){
   // ease the body into slide / crouch / sprint lean
   const tl=pose===2?.62:pose===3?-.12:sprint?-.22:0,ty=pose===2?-.5:pose===3?-.38:0,k=1-Math.exp(-dt*14);
   const amp=Math.min(1,sp/5),air=!c.onGround;
+  if(sprint&&!air&&c.isPlayer){c.stepT=(c.stepT||0)-dt;if(c.stepT<=0){c.stepT=.28;dust(c.pos,.05);}}
   c.walkT+=dt*sp*(sprint?1.2:1.45);c.idleT+=dt;
   const ph=c.walkT,sn=Math.sin(ph)*amp,co=Math.cos(ph),sw=sn*(sprint?1.15:.8),br=Math.sin(c.idleT*1.8);
   // body: lean into the run, bob with each step, breathe when standing
   c.rig.rotation.x=lerp(c.rig.rotation.x,tl-(pose===0?.07*amp:0),k);c.py=lerp(c.py,ty,k);
-  c.rig.position.y=c.py+(air?0:(Math.abs(co)-.6)*.07*amp)+(amp<.1?br*.012:0);
+  c.land=Math.max(0,(c.land||0)-dt*5);c.jumpT=Math.max(0,(c.jumpT||0)-dt);
+  c.rig.position.y=c.py+(air?0:(Math.abs(co)-.6)*.07*amp)+(amp<.1?br*.012:0)-c.land*.22;
+  const sq=1-c.land*.12+c.jumpT*.4;c.rig.scale.set(1/Math.sqrt(sq),sq,1/Math.sqrt(sq));
   // hit boxes follow the pose so a slide or crouch is a smaller target
   const hb=c.hit[0],hh=c.hit[1],bs=pose===2?.5:pose===3?.75:1;
   if(hb.scale.y!==bs){hb.scale.y=bs;hb.position.y=.86*bs;hh.position.y=pose===2?1.12:pose===3?1.62:2.07;hb.updateMatrixWorld();hh.updateMatrixWorld();}
@@ -2236,7 +2278,7 @@ function tickChar(c,dt){
   let tL,tR,sL,sR;
   if(pose===2){tL=1.25;tR=.55;sL=-.35;sR=-1.1;}
   else if(pose===3){tL=.95+sw*.3;tR=.45-sw*.3;sL=-1.25;sR=-1.25;}
-  else if(air){tL=.75;tR=-.15;sL=-1.15;sR=-.55;}
+  else if(air){if(c.vel.y>0){tL=.95;tR=.2;sL=-1.5;sR=-.9;}else{tL=.35;tR=-.1;sL=-.45;sR=-.25;}}
   else{tL=sn*A;tR=-sn*A;sL=-amp*(.12+knee*Math.max(0,co));sR=-amp*(.12+knee*Math.max(0,-co));}
   const kl=1-Math.exp(-dt*22);
   c.legL.rotation.x=lerp(c.legL.rotation.x,tL,kl);c.legR.rotation.x=lerp(c.legR.rotation.x,tR,kl);
@@ -2267,7 +2309,7 @@ function tickChar(c,dt){
     if(c.using){aR=1.0;fR=1.2;aL=.9;fL=1.1;zL=.3;}
     if(it&&it.kind!=='gun'){c.hold.rotation.x=-drop;c.hold.position.set(.22,1.3-drop*.5,-.42);}
   }
-  if(air&&!(it&&it.kind==='gun')&&c.swingT<=0){aL=-.5;aR=Math.max(aR,.2);fL=.9;}
+  if(air&&!(it&&it.kind==='gun')&&c.swingT<=0){aL=c.vel.y>0?.9:-.6;aR=Math.max(aR,c.vel.y>0?.7:.2);fL=.6;}
   const ka=1-Math.exp(-dt*26);
   c.armL.rotation.x=lerp(c.armL.rotation.x,aL,ka);c.armR.rotation.x=lerp(c.armR.rotation.x,aR,ka);c.armL.rotation.z=lerp(c.armL.rotation.z,zL,ka);
   c.foreL.rotation.x=lerp(c.foreL.rotation.x,fL,ka);c.foreR.rotation.x=lerp(c.foreR.rotation.x,fR,ka);
@@ -2316,7 +2358,7 @@ function updatePlayer(dt){
     if(p.aiming)speed=crouch?3.6:4.8;if(p.using)speed=3.5;
     p.coyote=p.onGround?.12:(p.coyote||0)-dt;
     if(p.onGround||p.coyote>0){const k=Math.min(1,dt*(l>0?14:18));p.vel.x=lerp(p.vel.x,vx*speed,k);p.vel.z=lerp(p.vel.z,vz*speed,k);
-      if(keys.Space&&!crouch&&p.vel.y<=.01){p.vel.y=10.2;p.onGround=false;p.coyote=0;}}
+      if(keys.Space&&!crouch&&p.vel.y<=.01){p.vel.y=11.2;p.onGround=false;p.coyote=0;p.jumpT=.18;dust(p.pos,.35);}}
     else{const cur=Math.hypot(p.vel.x,p.vel.z),tgt=Math.max(speed,Math.min(cur,16));  // keep momentum from a slide jump
       p.vel.x=lerp(p.vel.x,vx*tgt,Math.min(1,dt*(cur>speed+.5?1.2:4)));p.vel.z=lerp(p.vel.z,vz*tgt,Math.min(1,dt*(cur>speed+.5?1.2:4)));}
     p.pose=crouch?3:sprinting&&l>0?1:0;
@@ -2372,7 +2414,7 @@ function updateCamera(dt){
   const p=player;let pivot=tmpC,target,shoulder=.8;
   if(p.state==='barge'){pivot.copy(barge.pos);pivot.y+=3;target=28;shoulder=0;}
   else if(p.vehicle){const v=p.vehicle;pivot.set(v.pos.x,v.pos.y+v.V.cam[1],v.pos.z);target=v.V.cam[0];shoulder=0;}
-  else{p.camDrop=lerp(p.camDrop,p.pose===2?.85:p.pose===3?.5:0,1-Math.exp(-dt*12));pivot.set(p.pos.x,p.pos.y+1.75-p.camDrop,p.pos.z);target=p.state==='sky'?9:p.aiming?2.3:4.2;}
+  else{p.camDrop=lerp(p.camDrop,(p.pose===2?.85:p.pose===3?.5:0)+(p.land||0)*.35,1-Math.exp(-dt*12));pivot.set(p.pos.x,p.pos.y+1.75-p.camDrop,p.pos.z);target=p.state==='sky'?9:p.aiming?2.3:4.2;}
   camera.rotation.set(p.pitch,p.yaw,0);
   const fx=-Math.sin(p.yaw)*Math.cos(p.pitch),fy=Math.sin(p.pitch),fz=-Math.cos(p.yaw)*Math.cos(p.pitch);
   tmpB.set(pivot.x+Math.cos(p.yaw)*shoulder,pivot.y,pivot.z-Math.sin(p.yaw)*shoulder);
