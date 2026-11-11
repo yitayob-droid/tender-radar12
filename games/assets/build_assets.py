@@ -12,6 +12,7 @@ Material names matter: the game recolours "Suit", "Skin", "GliderCloth", "Leaf"
 and "Rarity" per character, tree or weapon, and makes "ChestWood" glow.
 """
 import base64
+import gzip
 import math
 import os
 import random
@@ -1022,7 +1023,7 @@ def house_furniture():
     for row in range(4):
         x = -0.95
         while x < 0.9:
-            w = random.uniform(0.07, 0.14)
+            w = random.uniform(0.12, 0.2)
             hgt = random.uniform(0.32, 0.46)
             p.append(box((w, 0.3, hgt), (x + w / 2, -5.45, 0.2 + row * 0.56 + hgt / 2), random.choice(BOOKS)))
             x += w + 0.01
@@ -1522,7 +1523,7 @@ def ammo():
         q = [shade(rod(0.022, 0.36, (0, 0.18, R), OLIVE, "y", 10), True),
              shade(rod(0.026, 0.04, (0, 0.28, R), STRIPEO, "y", 10), True),
              shade(prim("cone", loc=(0, 0.02, R), rot=(math.pi / 2, 0, 0), m=OLIVE, radius1=0.035, radius2=0.02, depth=0.05, vertices=10), True),
-             shade(prim("uv", loc=(0, 0.46, R), scale=(1, 1.7, 1), m=OLIVE, radius=R, segments=14, ring_count=8), True),
+             shade(prim("uv", loc=(0, 0.46, R), scale=(1, 1.7, 1), m=OLIVE, radius=R, segments=10, ring_count=6), True),
              shade(rod(0.02, 0.03, (0, 0.57, R), DARK, "y", 10), True)]
         for s in (-1, 1):
             q.append(shade(prim("uv", loc=(s * 0.03, 0.47, R * 1.75), scale=(1, 1.6, 0.4), m=WHITE, radius=0.016, segments=10, ring_count=6), True))
@@ -1915,7 +1916,7 @@ def densify(o, max_edge=1.1, passes=3):
     bm.free()
 
 
-DENSIFY = ("Cliff", "HouseWall", "HouseFurniture", "House", "Shack", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
+DENSIFY = ("Cliff", "HouseWall", "House", "Shack", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Crate", "Dock", "Torso", "Rock")
 
 
 def bake_ao(samples=48, distance=0.9):
@@ -1967,7 +1968,7 @@ def polish():
             shade(o, True)
             continue
         if o.name.startswith(DENSIFY):  # split big faces first so the baked shading stays local
-            densify(o, max_edge=2.2, passes=2)
+            densify(o, max_edge=3.0, passes=2)
             o["dense"] = 1
         size = max(o.dimensions)
         w = min(0.04, max(0.006, size * 0.005))
@@ -2023,8 +2024,9 @@ bpy.ops.export_scene.gltf(filepath=GLB, export_format="GLB", export_apply=True, 
 print("wrote", GLB, os.path.getsize(GLB), "bytes")
 
 # ---------------------------------------------------------------- embed in the game page
+# Embedded gzipped (about a third of the size); the page inflates it with DecompressionStream.
 with open(GLB, "rb") as f:
-    b64 = base64.b64encode(f.read()).decode()
+    b64 = base64.b64encode(gzip.compress(f.read(), 9, mtime=0)).decode()
 with open(HTML, encoding="utf-8") as f:
     page = f.read()
 page, n = re.subn(r"/\*GLB_START\*/.*?/\*GLB_END\*/", lambda _: f'/*GLB_START*/"{b64}"/*GLB_END*/', page, flags=re.S)
