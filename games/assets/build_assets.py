@@ -857,6 +857,16 @@ ROOF = mat("Roof", 0xB34A3C)
 TRIM = mat("Trim", 0xF5F1E6)
 GLASS = mat("Glass", 0x8FD0F0, 0.1)
 SHUTTER = mat("Shutter", 0x3F6E8C)
+FLOWER_A = mat("FlowerA", 0xE8506A)
+FLOWER_B = mat("FlowerB", 0xF2C230)
+DOORWOOD = mat("DoorWood", 0x6B4226)
+BLANKET = mat("Blanket", 0x4A7FC0)
+SHEET = mat("Sheet", 0xF2EEE6)
+RUG = mat("Rug", 0xB8463C)
+COUCH = mat("Couch", 0x5A7A4A)
+COUNTER = mat("Counter", 0xDCD8CE)
+APPLIANCE = mat("Appliance", 0xE8ECEF, 0.3)
+BOOKS = [mat("BookA", 0xC0392B), mat("BookB", 0x2E6DA4), mat("BookC", 0x3E8E41), mat("BookD", 0xE0A030)]
 FLOOR = mat("Floor", 0x9C7650)
 BRICK = mat("Brick", 0x8E4B3A)
 STONE = mat("Stone", 0x9A9890)
@@ -916,6 +926,14 @@ def window(parts, center, normal, width=1.3, height=1.2):
             sill = (width + 0.5, 0.25, 0.08) if along_x else (0.25, width + 0.5, 0.08)
             spos = (fx, fy + normal[1] * 0.1, cz - height / 2 - 0.18) if along_x else (fx + normal[0] * 0.1, fy, cz - height / 2 - 0.18)
             parts.append(box(sill, spos, TRIM))
+            fb = (width + 0.2, 0.3, 0.22) if along_x else (0.3, width + 0.2, 0.22)
+            fpos = (fx, fy + normal[1] * 0.28, cz - height / 2 - 0.34) if along_x else (fx + normal[0] * 0.28, fy, cz - height / 2 - 0.34)
+            parts.append(box(fb, fpos, WOOD))
+            for k in range(4):  # flowers
+                o = (k - 1.5) / 1.5 * width * 0.4
+                fl = (fpos[0] + o, fpos[1], fpos[2] + 0.17) if along_x else (fpos[0], fpos[1] + o, fpos[2] + 0.17)
+                parts.append(shade(prim("ico", loc=fl, m=(FLOWER_A if k % 2 else FLOWER_B), radius=0.09, subdivisions=1), True))
+                parts.append(shade(prim("ico", loc=(fl[0], fl[1], fl[2] - 0.06), m=LEAF, radius=0.1, subdivisions=1), True))
 
 
 def house():
@@ -955,10 +973,93 @@ def house():
     for x in (-h, h):  # gable ends
         S.append(prism("gable", [(x, -h, H), (x, h, H), (x, 0, H + rise)], (1, 0, 0), T, HOUSEWALL))
     S.append(box((1.0, 1.0, 2.6), (3.4, -2.2, H + 1.9), BRICK))  # chimney
+    S.append(box((4.6, 2.2, 0.16), (0, h + 1.2, 3.35), ROOF, rot=(0.18, 0, 0)))  # porch roof
+    for sx in (-2.0, 2.0):
+        S.append(shade(rod(0.08, 3.2, (sx, h + 2.05, 1.65), TRIM, "z", 10), True))
+    door = box((1.3, 0.08, 2.9), (0, 0, 0), DOORWOOD)  # front door, swung open inward against the wall
+    door.location = (-1.4 + 0.04, h - 0.65, 1.47)
+    door.rotation_euler = (0, 0, math.pi / 2)
+    activate(door); bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+    S.append(door)
+    S.append(shade(prim("uv", loc=(-1.36, h - 1.15, 1.45), m=ACCENT, radius=0.05, segments=8, ring_count=6), True))
+    for s_ in (-1, 1):  # gutters along the eaves
+        S.append(shade(rod(0.09, W + 1.2, (0, s_ * (h + 0.75), H - 0.05), SILO, "x", 10), True))
+    S.append(shade(rod(0.06, H, (h + 0.45, h + 0.75, H / 2), SILO, "z", 8), True))  # downpipe
+    S.append(box((0.12, 0.12, 1.1), (3.2, h + 2.6, 0.55), WOOD))  # mailbox post
+    S.append(bevel(box((0.3, 0.5, 0.28), (3.2, h + 2.6, 1.2), SHUTTER), 0.05))
+    for x in (-3, 0, 3):  # ceiling beams
+        S.append(box((0.22, W - 0.5, 0.25), (x, 0, H - 0.15), WOOD))
+    S.append(shade(rod(0.015, 0.8, (0, 0, H - 0.6), DARK, "z", 6), True))  # hanging lamp
+    S.append(shade(prim("cone", loc=(0, 0, H - 1.05), m=DARK, radius1=0.4, radius2=0.12, depth=0.3, vertices=16), True))
+    S.append(shade(prim("uv", loc=(0, 0, H - 1.18), m=LAMP, radius=0.14, segments=12, ring_count=8), True))
     S.append(box((1.2, 1.2, 0.2), (3.4, -2.2, H + 3.25), STONE))
+    for parts, axis, sgn in ((F, "y", 1), (B, "y", -1), (R, "x", 1), (L, "x", -1)):
+        o = (h + T / 2 + 0.02) * sgn
+        for z in (0.95, 1.35, 1.75, 2.15, 2.55, 2.95, 3.35, 3.75, 4.15):  # lap-siding lines
+            parts.append(box((W, 0.03, 0.035), (0, o, z), TRIM) if axis == "y" else box((0.03, W, 0.035), (o, 0, z), TRIM))
+        fo = (h + T / 2 + 0.06) * sgn
+        parts.append(box((W + 0.3, 0.14, 0.5), (0, fo, 0.25), STONE) if axis == "y" else box((0.14, W + 0.3, 0.5), (fo, 0, 0.25), STONE))
     for parts, n in ((F, "F"), (B, "B"), (R, "R"), (L, "L")):
         join(parts, "HouseWall_" + n)
     return join(S, "House")
+
+
+def house_furniture():
+    """Furniture laid out inside the 12 m house (door on +Y, chest in the back-right corner)."""
+    p = []
+    # bed in the back-left corner
+    p.append(bevel(box((2.0, 2.6, 0.4), (-4.6, -4.3, 0.25), WOOD), 0.04))
+    p.append(bevel(box((1.9, 2.4, 0.22), (-4.6, -4.25, 0.56), SHEET), 0.08))
+    p.append(bevel(box((1.95, 1.6, 0.12), (-4.6, -3.7, 0.7), BLANKET), 0.05))
+    p.append(bevel(box((1.2, 0.45, 0.18), (-4.6, -5.25, 0.74), SHEET), 0.08))
+    p.append(bevel(box((2.0, 0.12, 1.2), (-4.6, -5.65, 0.6), WOOD), 0.03))
+    p.append(bevel(box((0.6, 0.55, 0.6), (-3.1, -5.4, 0.3), WOOD), 0.03))  # nightstand
+    p.append(shade(prim("cone", loc=(-3.1, -5.4, 0.85), m=SHEET, radius1=0.2, radius2=0.12, depth=0.25, vertices=12), True))
+    p.append(shade(prim("uv", loc=(-3.1, -5.4, 0.7), m=LAMP, radius=0.08, segments=8, ring_count=6), True))
+    # bookshelf on the back wall
+    p.append(bevel(box((2.2, 0.45, 2.4), (0, -5.55, 1.2), WOOD), 0.03))
+    random.seed(77)
+    for row in range(4):
+        x = -0.95
+        while x < 0.9:
+            w = random.uniform(0.07, 0.14)
+            hgt = random.uniform(0.32, 0.46)
+            p.append(box((w, 0.3, hgt), (x + w / 2, -5.45, 0.2 + row * 0.56 + hgt / 2), random.choice(BOOKS)))
+            x += w + 0.01
+    # kitchen along the right wall
+    p.append(bevel(box((0.75, 3.4, 1.0), (5.35, 1.6, 0.5), COUNTER), 0.03))
+    p.append(box((0.8, 3.45, 0.08), (5.33, 1.6, 1.02), DARK))
+    p.append(box((0.5, 0.6, 0.06), (5.35, 0.7, 1.04), SILO))  # sink
+    p.append(shade(rod(0.03, 0.35, (5.6, 0.7, 1.2), SILO, "z", 8), True))
+    for k in range(4):  # stove rings
+        p.append(shade(rod(0.1, 0.02, (5.25 + (k % 2) * 0.25, 2.3 + (k // 2) * 0.3, 1.07), GUNDARK, "z", 14), True))
+    p.append(bevel(box((0.8, 0.9, 2.1), (5.3, 4.5, 1.05), APPLIANCE), 0.06))  # fridge
+    p.append(box((0.04, 0.05, 0.6), (4.88, 4.2, 1.4), SILO))
+    # dining table with four chairs
+    p.append(bevel(box((1.8, 1.2, 0.08), (2.2, -1.2, 0.8), WOOD), 0.02))
+    for x in (1.45, 2.95):
+        for y in (-1.7, -0.7):
+            p.append(box((0.08, 0.08, 0.76), (x, y, 0.38), WOOD))
+    for x, y, r in ((1.6, -2.1, 0), (2.8, -2.1, 0), (1.6, -0.3, math.pi), (2.8, -0.3, math.pi)):
+        p.append(bevel(box((0.5, 0.5, 0.08), (x, y, 0.48), WOOD), 0.02))
+        back = -0.23 if r == 0 else 0.23
+        p.append(box((0.5, 0.06, 0.6), (x, y + back, 0.8), WOOD))
+        for dx in (-0.2, 0.2):
+            for dy in (-0.2, 0.2):
+                p.append(box((0.05, 0.05, 0.46), (x + dx, y + dy, 0.23), WOOD))
+    p.append(shade(prim("cyl", loc=(2.2, -1.2, 0.95), m=BLANKET, radius=0.12, depth=0.22, vertices=12), True))  # vase
+    p.append(shade(prim("ico", loc=(2.2, -1.2, 1.12), m=FLOWER_A, radius=0.1, subdivisions=1), True))
+    # living area: rug, couch facing a low table, pictures on the left wall
+    p.append(bevel(box((3.4, 2.6, 0.03), (-2.4, 1.6, 0.03), RUG), 0.01))
+    p.append(bevel(box((0.9, 2.6, 0.45), (-5.2, 1.6, 0.28), COUCH), 0.08))
+    p.append(bevel(box((0.3, 2.6, 0.75), (-5.6, 1.6, 0.65), COUCH), 0.08))
+    for y in (0.35, 2.85):
+        p.append(bevel(box((0.9, 0.25, 0.65), (-5.2, y, 0.42), COUCH), 0.08))
+    p.append(bevel(box((1.0, 1.4, 0.4), (-3.3, 1.6, 0.22), WOOD), 0.03))  # coffee table
+    for y, col in ((-1.4, FLOWER_B), (0.2, BLANKET)):
+        p.append(box((0.06, 1.0, 0.75), (-5.77, y, 2.4), WOOD))
+        p.append(box((0.07, 0.85, 0.6), (-5.77, y, 2.4), col))
+    return join(p, "HouseFurniture")
 
 
 def windmill():
@@ -1789,7 +1890,7 @@ pine("PineA", 1); pine("PineB", 2); round_tree("RoundA", 3); round_tree("RoundB"
 bush("BushA", 12); bush("BushB", 13, berries=True); blade_fan("Fern", 9, 1.1, 0.16, FERN, 0.9, 16, curl=0.35); blade_fan("GrassTuft", 7, 0.55, 0.05, GRASS, 0.35, 17)
 rock("RockA", 5); rock("RockB", 6); rock("RockC", 7)
 chest(); airship()
-house(); windmill(); lighthouse(); silo(); water_tower(); container()
+house(); house_furniture(); windmill(); lighthouse(); silo(); water_tower(); container()
 crate(); barrel(); fence(); lamp_post(); hay_bale(); dock(); boat()
 reeds(); lily("LilyPad", False); lily("LilyFlower", True); campfire(); shack()
 wheel(); car_sport(); car_truck()
@@ -1814,7 +1915,7 @@ def densify(o, max_edge=1.1, passes=3):
     bm.free()
 
 
-DENSIFY = ("Cliff", "House", "Shack", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
+DENSIFY = ("Cliff", "HouseWall", "HouseFurniture", "House", "Shack", "Windmill", "Lighthouse", "Silo", "WaterTower", "Container", "Chest", "Crate", "Dock", "Torso", "Rock")
 
 
 def bake_ao(samples=48, distance=0.9):
