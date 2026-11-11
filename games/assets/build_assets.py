@@ -994,10 +994,19 @@ def house():
     S.append(shade(prim("cone", loc=(0, 0, H - 1.05), m=DARK, radius1=0.4, radius2=0.12, depth=0.3, vertices=16), True))
     S.append(shade(prim("uv", loc=(0, 0, H - 1.18), m=LAMP, radius=0.14, segments=12, ring_count=8), True))
     S.append(box((1.2, 1.2, 0.2), (3.4, -2.2, H + 3.25), STONE))
-    for parts, axis, sgn in ((F, "y", 1), (B, "y", -1), (R, "x", 1), (L, "x", -1)):
+    # openings each siding line must break around: (centre along the wall, half-width, bottom, top)
+    win_side = [(-3, 0.8, 1.4, 3.0), (3, 0.8, 1.4, 3.0)]
+    holes = {"F": [(0, 1.65, 0, 3.25), (-3.9, 0.75, 1.4, 3.0), (3.9, 0.75, 1.4, 3.0)], "B": win_side, "R": win_side, "L": win_side}
+    for parts, axis, sgn, key in ((F, "y", 1, "F"), (B, "y", -1, "B"), (R, "x", 1, "R"), (L, "x", -1, "L")):
         o = (h + T / 2 + 0.02) * sgn
         for z in (0.95, 1.35, 1.75, 2.15, 2.55, 2.95, 3.35, 3.75, 4.15):  # lap-siding lines
-            parts.append(box((W, 0.03, 0.035), (0, o, z), TRIM) if axis == "y" else box((0.03, W, 0.035), (o, 0, z), TRIM))
+            cuts = sorted((c - hw, c + hw) for c, hw, lo, hi in holes[key] if lo <= z <= hi)
+            a = -W / 2
+            for c0, c1 in cuts + [(W / 2, W / 2)]:
+                if c0 - a > 0.05:
+                    m, ln = (a + c0) / 2, c0 - a
+                    parts.append(box((ln, 0.03, 0.035), (m, o, z), TRIM) if axis == "y" else box((0.03, ln, 0.035), (o, m, z), TRIM))
+                a = max(a, c1)
         fo = (h + T / 2 + 0.06) * sgn
         parts.append(box((W + 0.3, 0.14, 0.5), (0, fo, 0.25), STONE) if axis == "y" else box((0.14, W + 0.3, 0.5), (fo, 0, 0.25), STONE))
     for parts, n in ((F, "F"), (B, "B"), (R, "R"), (L, "L")):
