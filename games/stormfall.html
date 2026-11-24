@@ -3015,8 +3015,17 @@ async function connectRoom(code){
   const use=(room,tag)=>{if(!live()){try{tag==='p2p'&&room.leave();}catch(e){}return;}hub.add(room,tag);
     if(!attached){attached=true;NET.roomTried=true;attachRoom(hub);}else if(game==='menu')renderLobby();};
   // claude.ai's own room (people the artifact is shared with). Everyone on this page shares one lobby there.
-  (async()=>{let cr=null;try{cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;}catch(e){}
-    if(cr)use(cr,'claude');})();
+  // claude.ai can hand the page its window.claude a moment after the script starts, so wait for it,
+  // and keep asking for a while if the room isn't ready on the first try.
+  (async()=>{
+    for(let i=0;i<120&&live();i++){
+      if(window.claude&&typeof window.claude.use==='function'){
+        let cr=null;try{cr=await window.claude.use('room');}catch(e){}
+        if(!live())return;
+        if(cr){use(cr,'claude');return;}
+        await new Promise(f=>setTimeout(f,5000));
+      }else await new Promise(f=>setTimeout(f,250));
+    }})();
   // the peer-to-peer lobby (works on any link); relays can be slow, so keep waiting in the background
   (async()=>{let r=null;try{r=await p2pRoom(code);}catch(e){return;}
     for(let i=0;i<300&&live();i++){if(r.relaysUp()){use(r,'p2p');return;}await new Promise(f=>setTimeout(f,i<60?200:2000));}
