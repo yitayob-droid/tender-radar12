@@ -92,6 +92,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
 #squad .sq span{height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;display:flex}
 #squad .sq span u{display:block;height:100%;background:#5ff07a}
 #squad .sq span s{display:block;height:100%;background:#59b8ff}
+#emotes{position:absolute;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:8px;background:rgba(10,8,20,.6);padding:10px 12px;border-radius:6px}
+#emotes[hidden]{display:none}
+#emotes div{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:70px;padding:6px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);font:700 13px var(--body);color:#fff}
+#emotes div span{font-size:22px;line-height:1}
+#emotes div kbd{font-family:var(--display);background:var(--fg);color:var(--ink);padding:0 5px;font-size:12px}
+#emotes p{position:absolute;left:0;right:0;top:-22px;margin:0;text-align:center;font:700 12px var(--body);color:#e8e4f4;text-shadow:0 1px 0 #000}
 #spec{position:absolute;left:50%;top:22%;transform:translateX(-50%);font:700 15px var(--body);color:#fff;background:rgba(10,8,20,.55);padding:6px 14px;text-shadow:0 1px 0 #000}
 
 #vign{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px rgba(255,30,60,.7);opacity:0;transition:opacity .4s}
@@ -322,6 +328,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
   <div id="tags"></div>
   <div id="squad"></div>
   <div id="spec" hidden></div>
+  <div id="emotes" hidden><p>Pick an emote · moving or shooting stops it</p>
+    <div><kbd>1</kbd><span>👋</span>Wave</div><div><kbd>2</kbd><span>🕺</span>Groove</div><div><kbd>3</kbd><span>💪</span>Flex</div><div><kbd>4</kbd><span>🌀</span>Spin</div></div>
   <div id="scope"></div>
   <canvas id="compass" width="760" height="64" aria-hidden="true"></canvas>
   <div id="zonearrow" hidden><i id="zonei"></i><span id="zonedist"></span></div>
@@ -398,6 +406,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(-
         <div><span>Toggle build mode</span><kbd>Q</kbd></div>
         <div><span>Edit your piece: G, click or drag across tiles, G again or let go to confirm; right-click resets it. Drag across stairs to turn them</span><kbd>G or F</kbd></div>
         <div><span>Switch wood / brick / metal (build mode)</span><kbd>Right click</kbd></div>
+        <div><span>Emote (then 1–4)</span><kbd>B</kbd></div>
         <div><span>Look without a mouse</span><kbd>Arrow keys</kbd></div>
       </div>
       </details>
@@ -1433,6 +1442,15 @@ const aliveCount=()=>chars.reduce((n,c)=>n+(c.alive?1:0),0);
 // hurt each other, bullets pass through them, and the squad wins together.
 const allies=(a,b)=>!!(a&&b&&a!==b&&a.team&&a.team===b.team);
 let spec=null; // the teammate you're watching after you've been knocked out
+/* ---- emotes: B opens the picker, 1-4 plays one; everyone in the match sees it ---- */
+const EMOTES=[null,{n:'Wave',dur:3},{n:'Groove',dur:10},{n:'Flex',dur:3.5},{n:'Spin',dur:3}];
+let emoteMenu=false;
+function toggleEmotes(on){emoteMenu=on===undefined?!emoteMenu:on;$('emotes').hidden=!emoteMenu;}
+function startEmote(id){
+  const p=player;toggleEmotes(false);
+  if(!EMOTES[id]||!p.alive||p.downed||p.vehicle||p.state!=='ground'||p.using)return;
+  buildPiece=null;if(editing)endEdit(false);p.emote=id;p.emoteT=0;p.aiming=false;sfx('equip');
+}
 const REVIVE_T=4;  // seconds of holding E to pick a teammate up
 // a teammate still standing can pick you up, so a final hit knocks you down instead of out
 const canDown=t=>NET.mp&&!t.remote&&!!t.team&&chars.some(c=>c.alive&&!c.downed&&allies(t,c));
@@ -2369,6 +2387,8 @@ function tickChar(c,dt){
     return;}
   if(c.glider.visible){c.glider.visible=false;c.glider.scale.set(1,1,1);}
   if(c.rig.rotation.z||c.armL.rotation.z>.3){c.rig.rotation.z=0;c.armR.rotation.z=0;c.legL.rotation.z=c.legR.rotation.z=0;c.glider.scale.set(1,1,1);}
+  if(c.emote&&c.state==='ground'&&!c.downed){animEmote(c,dt);return;}
+  if(c.emoteHide)endEmotePose(c);
   // bots show a sprint when they run flat out
   if(!c.isPlayer&&!c.remote)c.pose=sp>7.4?1:0;
   const pose=c.state==='ground'?c.pose:0,sprint=pose===1;
@@ -2433,6 +2453,28 @@ function tickChar(c,dt){
   c.rig.rotation.y=lerp(c.rig.rotation.y,twist,ka);
 }
 
+function endEmotePose(c){c.emoteHide=false;c.hold.visible=true;c.setHeld();c.armR.rotation.z=0;c.rig.rotation.z=0;c.rig.rotation.y=0;}
+function animEmote(c,dt){
+  if(!c.emoteHide){c.emoteHide=true;c.hold.visible=false;c.pickaxe.visible=false;}
+  const t=c.emoteT||0,k=1-Math.exp(-dt*16),L=(o,a,v)=>{o.rotation[a]=lerp(o.rotation[a],v,k);};
+  let aL=0,aR=0,fL=.2,fR=.2,zL=0,zR=0,tL=0,tR=0,sL=0,sR=0,lean=0,sway=0,turn=0,bob=0;
+  switch(c.emote){
+    case 1:{ // wave: right arm up, forearm swinging side to side
+      aR=2.7;zR=.25;fR=.35+Math.sin(t*11)*.45;aL=.1;lean=-.05;bob=Math.sin(t*3)*.01;break;}
+    case 2:{ // groove: step side to side, hips and arms pumping on the beat
+      const b=t*6.4,sn=Math.sin(b);bob=-.06+Math.abs(sn)*.09;sway=sn*.14;turn=sn*.3;
+      tL=.35*sn;tR=-.35*sn;sL=-.6*Math.max(0,sn);sR=-.6*Math.max(0,-sn);
+      aL=1.1+.7*Math.sin(b+1.2);aR=1.1-.7*Math.sin(b+1.2);fL=fR=1.5;zL=.15;break;}
+    case 3:{ // flex: both arms up and out, biceps pumping
+      const pu=Math.sin(t*9);aL=aR=1.55;zL=-1.25;zR=1.25;fL=fR=1.9+pu*.25;lean=-.12;bob=pu*.015;break;}
+    case 4:{ // spin: arms out, turning on the spot
+      aL=aR=.2;zL=-1.35;zR=1.35;fL=fR=.1;turn=null;bob=Math.sin(t*8)*.03;tL=.15;tR=-.15;break;}
+  }
+  L(c.armL,'x',aL);L(c.armR,'x',aR);L(c.armL,'z',zL);L(c.armR,'z',zR);L(c.foreL,'x',fL);L(c.foreR,'x',fR);
+  L(c.legL,'x',tL);L(c.legR,'x',tR);L(c.shinL,'x',sL);L(c.shinR,'x',sR);L(c.rig,'x',lean);L(c.rig,'z',sway);
+  if(turn===null)c.rig.rotation.y=t*7.5;else L(c.rig,'y',turn);
+  c.py=lerp(c.py,bob,k);c.rig.position.y=c.py;c.rig.scale.set(1,1,1);
+}
 /* ================= player ================= */
 const camState={cur:4,fov:72};
 function updatePlayer(dt){
@@ -2452,12 +2494,13 @@ function updatePlayer(dt){
     const fw=(keys.KeyW?1:0)-(keys.KeyS?1:0),sp=p.glide?13+fw*5:16+fw*10,k=Math.min(1,dt*(p.glide?1.8:2.6));
     p.vel.x=lerp(p.vel.x,vx*sp,k);p.vel.z=lerp(p.vel.z,vz*sp,k);skyStep(p,dt);windFx(dt,p);return;}
   windFx(dt,null);
-  if(p.downed){
+  if(p.downed){p.emote=0;
     // knocked down: bleed out slowly, crawl, no shooting or building
     p.hp-=dt*4;if(p.hp<=0){p.hp=0;eliminate(p,p.downBy,p.downW);return;}
     const k=Math.min(1,dt*10);p.vel.x=lerp(p.vel.x,vx*2.4,k);p.vel.z=lerp(p.vel.z,vz*2.4,k);
     p.pose=5;p.aiming=false;buildPiece=null;physics(p,dt);mouse.clicked=false;return;}
   if(p.vehicle){if(p.vehicle.dead){exitVehicle(p);return;}driveVehicle(p.vehicle,dt);seatPos(p,p.pos);p.vel.set(0,0,0);p.onGround=true;p.pose=4;mouse.clicked=false;return;}
+  if(p.emote){p.emoteT+=dt;if(l>0||keys.Space||mouse.l||mouse.r||buildPiece||p.using||!p.onGround||p.emoteT>EMOTES[p.emote].dur)p.emote=0;}
   // sprint (hold Shift, moving forward; shooting or aiming breaks it), crouch (hold V), slide (V while sprinting)
   p.sprintBlock-=dt;p.slideCd-=dt;
   const wading=inLake(p.pos.x,p.pos.z)&&p.pos.y<0;
@@ -2549,9 +2592,13 @@ function updateCamera(dt){
   if(p.state==='barge'){pivot.copy(barge.pos);pivot.y+=3;target=28;shoulder=0;}
   else if(p.vehicle){const v=p.vehicle;pivot.set(v.pos.x,v.pos.y+v.V.cam[1],v.pos.z);target=v.V.cam[0];shoulder=0;}
   else{p.camDrop=lerp(p.camDrop,(p.pose===5?1.0:p.pose===2?.85:p.pose===3?.5:0)+(p.land||0)*.35,1-Math.exp(-dt*12));pivot.set(p.pos.x,p.pos.y+1.75-p.camDrop,p.pos.z);target=p.state==='sky'?(p.glide?8:6.5):p.aiming?2.3:4.2;}
-  camera.rotation.set(p.pitch,p.yaw,0);
-  const fx=-Math.sin(p.yaw)*Math.cos(p.pitch),fy=Math.sin(p.pitch),fz=-Math.cos(p.yaw)*Math.cos(p.pitch);
-  tmpB.set(pivot.x+Math.cos(p.yaw)*shoulder,pivot.y,pivot.z-Math.sin(p.yaw)*shoulder);
+  // emoting: swing the camera round to look at the front of your character
+  camState.emo=lerp(camState.emo||0,p.emote&&p===player?Math.PI:0,1-Math.exp(-dt*5));
+  if(camState.emo>.02){shoulder*=1-camState.emo/Math.PI;target=Math.max(target,4.8);}
+  const cy=p.yaw+camState.emo,cp=p.emote&&p===player?lerp(p.pitch,-.18,camState.emo/Math.PI):p.pitch;
+  camera.rotation.set(cp,cy,0);
+  const fx=-Math.sin(cy)*Math.cos(cp),fy=Math.sin(cp),fz=-Math.cos(cy)*Math.cos(cp);
+  tmpB.set(pivot.x+Math.cos(cy)*shoulder,pivot.y,pivot.z-Math.sin(cy)*shoulder);
   let d=lerp(camState.cur,target,1-Math.exp(-dt*12));
   if(p.state!=='barge'){tmpD.set(-fx,-fy,-fz);rc.set(tmpB,tmpD);rc.near=0;rc.far=d+.3;
     const hits=rc.intersectObjects(solids,false);for(const h of hits){if(h.object.userData.char||(p.vehicle&&h.object.userData.vehicle===p.vehicle))continue;d=Math.max(.6,h.distance-.3);break;}}
@@ -2795,7 +2842,7 @@ function newMatch(opts){
   const tn=NET.modeId==='teams'?(player.team===1?'Blue':'Red')+' team · ':'';
   banner(NET.mp?MODES[NET.modeId].name:'Thornwick Island',NET.mp?tn+list.length+' players'+(nb?' + '+nb+' bots':'')+' · press SPACE to jump':'Press SPACE to leave the airship',3.5);
   if(NET.mp)NET.room.presence({m:NET.match,st:charState(player),ev:[],bt:null}).catch(()=>{});
-  $('spec').hidden=true;buildSquadPanel();
+  $('spec').hidden=true;buildSquadPanel();toggleEmotes(false);
 }
 function endMatch(win){
   if(match.over)return;match.over=true;game='over';closeInv(false);closeMap(false);
@@ -2830,7 +2877,7 @@ const cleanName=n=>{let out='';for(const ch of String(n||'Player')){const c=ch.c
   if(c<32||(c>126&&c<160)||(c>=0x200b&&c<=0x200f)||(c>=0x2028&&c<=0x202e)||(c>=0x2066&&c<=0x2069)||c===0xfeff)continue;out+=ch;}
   return out.trim().slice(0,16)||'Player';};
 function weaponCode(c){const it=c.slots[c.sel];if(!it)return 'n';if(it.kind==='pick')return 'p';if(it.kind==='gun')return it.id+it.rarity;if(it.kind==='heal')return 'h'+it.id;return 'n';}
-function charState(c){return [r1(c.pos.x),r1(c.pos.y),r1(c.pos.z),r2(c.yaw),r2(c.pitch),STATE_CODE[c.state]||0,c.glide?1:0,weaponCode(c),c.shots||0,c.alive?1:0,c.pose|0,Math.round(c.hp),Math.round(c.shield),c.downed?1:0,c.revT>0&&c.revTo?c.revTo:0];}
+function charState(c){return [r1(c.pos.x),r1(c.pos.y),r1(c.pos.z),r2(c.yaw),r2(c.pitch),STATE_CODE[c.state]||0,c.glide?1:0,weaponCode(c),c.shots||0,c.alive?1:0,c.pose|0,Math.round(c.hp),Math.round(c.shield),c.downed?1:0,c.revT>0&&c.revTo?c.revTo:0,c.emote|0];}
 function netTick(dt){
   if(!NET.room||!NET.mp||!match)return;
   NET.tickT-=dt;if(NET.tickT>0)return;NET.tickT=1/12;
@@ -2851,7 +2898,7 @@ function parseWeapon(w){
 function applyNetState(c,st){
   if(!Array.isArray(st)||st.length<10)return;
   const n=c.net;n.x=fin(st[0]);n.y=fin(st[1]);n.z=fin(st[2]);n.yaw=fin(st[3]);n.pitch=fin(st[4]);
-  n.state=CODE_STATE[st[5]]||'barge';n.glide=!!st[6];n.w=st[7];n.f=fin(st[8]);n.alive=!!st[9];n.pose=[0,1,2,3,5].includes(st[10])?st[10]:0;n.downed=!!st[13];n.rv=typeof st[14]==='string'?st[14].slice(0,32):0;
+  n.state=CODE_STATE[st[5]]||'barge';n.glide=!!st[6];n.w=st[7];n.f=fin(st[8]);n.alive=!!st[9];n.pose=[0,1,2,3,5].includes(st[10])?st[10]:0;n.downed=!!st[13];n.emote=[1,2,3,4].includes(st[15])?st[15]:0;n.rv=typeof st[14]==='string'?st[14].slice(0,32):0;
   if(st.length>12){c.hp=clamp(fin(st[11]),0,100);c.shield=clamp(fin(st[12]),0,100);}
   if(!n.has){n.has=true;c.pos.set(n.x,n.y,n.z);c.yaw=n.yaw;}
 }
@@ -2865,6 +2912,7 @@ function remoteStep(c,dt){
   c.pitch=lerp(c.pitch,n.pitch,Math.min(1,dt*14));
   if(c.state==='barge'&&n.state!=='barge')c.mesh.visible=true;
   c.state=n.state;c.glide=n.glide;c.onGround=n.state==='ground';c.pose=n.pose||0;
+  if((n.emote|0)!==(c.emote|0)){c.emote=n.emote|0;c.emoteT=0;}else if(c.emote)c.emoteT=(c.emoteT||0)+dt;
   if(!!n.downed!==!!c.downed){c.downed=!!n.downed;if(c.team)squadCheck();}
   if(n.w!==c.netW){c.netW=n.w;const it=parseWeapon(n.w);c.slots=[{kind:'pick'},null,null,null,null];
     if(it&&it.kind!=='pick'){c.slots[1]=it;c.sel=1;}else c.sel=0;c.setHeld();}
@@ -3540,6 +3588,8 @@ addEventListener('keydown',e=>{
     else{const d=/^Digit([1-5])$/.exec(e.code);if(d){invSel={k:'slot',i:+d[1]-1};renderInv();}}return;}
   if(e.repeat||paused||!player.alive)return;
   initAudio();
+  if(e.code==='KeyB'){toggleEmotes();return;}
+  if(emoteMenu){const d=/^Digit([1-4])$/.exec(e.code);if(d){startEmote(+d[1]);return;}if(e.code==='Escape'){toggleEmotes(false);return;}toggleEmotes(false);}
   const m=/^Digit([1-5])$/.exec(e.code);
   if(editing&&!['KeyG','KeyF','KeyR'].includes(e.code)&&/^(Digit|Key[ZXCTQ])/.test(e.code))endEdit(true);
   if(m){buildPiece=null;selectSlot(player,+m[1]-1);return;}
