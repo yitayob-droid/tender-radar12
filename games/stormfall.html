@@ -2725,6 +2725,8 @@ function netTick(dt){
   while(NET.log.length&&JSON.stringify(NET.log).length>2300)NET.log.shift();
   const v=player.vehicle,patch={m:NET.match,st:charState(player),ev:NET.log,vh:v&&!v.dead?[v.id,r1(v.pos.x),r2(v.pos.y),r1(v.pos.z),r2(v.yaw),r1(v.speed),r2(v.steer)]:null};
   if(NET.host)patch.bt=chars.filter(c=>c.isBot).map(b=>b.alive?charState(b):0);
+  // the whole presence object must stay under the room's 4 KiB cap, or it is refused and nobody sees us move
+  if(NET.room.sizeWith)while(patch.ev.length&&NET.room.sizeWith(patch)>PRES_MAX){NET.log.shift();patch.ev=NET.log;}
   NET.room.presence(patch).catch(()=>{});
 }
 function parseWeapon(w){
@@ -2861,8 +2863,8 @@ function renderLobby(){
     $('roomrow').hidden=true;list.replaceChildren();show('hostbtn',false);show('gobtn',false);show('leavebtn',false);show('startbtn',true);playMode();refreshParty();return;
   }
   const people=NET.peers.filter(p=>p.kind==='viewer');
-  const p2p=NET.transport==='p2p',code=p2p?NET.room.code:'',pub=code==='public';
-  $('roomrow').hidden=!p2p;if(p2p)$('roomcode').textContent=pub?'PUBLIC':code.toUpperCase();
+  const code=NET.room.code||'public',pub=code==='public',p2p=!NET.room.has||NET.room.has('p2p');
+  $('roomrow').hidden=false;$('roomcode').textContent=pub?'PUBLIC':code.toUpperCase();
   st.textContent=people.length>1?people.length+' people '+(p2p?(pub?'in the public lobby':'in this room'):'here')+'. Host a match, or join someone who is hosting.':
     p2p?(pub?'Nobody else is in the public lobby right now. Make a private room and send your friends the invite link.':'You’re the only one in this room so far. Copy the invite link and send it to your friends.'):
     'You’re connected, but nobody else is here yet. Invite friends by email from the Share menu and have them open this page.';
@@ -2948,35 +2950,79 @@ function attachRoom(room){
     if(game==='menu')renderLobby();
     lobbyCheckStart();
     if(NET.mp){for(const p of ch.joined.concat(ch.updated))if(!p.sameTab)netPeer(p);for(const p of ch.left)netGone(p.peer);}
-  },()=>{if(NET.room===room){NET.room=null;renderLobby();if(!NET.mp)setTimeout(()=>{if(!NET.room)connectRoom();},2000);}});
+  });
   lobbyPresence();renderLobby();
 }
-// Prefer the online (Trystero) lobby so friends on any link can meet; inside claude.ai, fall back to
-// the built-in room if the page can't reach the relays.
+/* ---- the hub: one lobby made of every network this page can reach ----
+   Inside claude.ai the built-in room only admits signed-in people the artifact is shared with, while
+   people on a public link (or outside claude.ai) can only reach the peer-to-peer lobby. Joining just one
+   split friends across two lobbies that never see each other, so every page joins BOTH and merges them.
+   Each tab names itself with a random id (tid) in its presence; peers are keyed by that id, so someone
+   seen on both networks shows up once, with whichever copy changed last. */
+const PRES_MAX=3900; // the claude.ai room refuses a presence object over 4 KiB
+function makeHub(code){
+  const tid=NET.tid,srcs=[],subs=[];let mine={tid},prev=new Map(),open=true,queued=false,warned=false;
+  const meRow=()=>({peer:tid,isMe:true,sameTab:true,kind:'viewer',presence:mine,updatedAt:Date.now()});
+  function recompute(){
+    if(!open)return;
+    const m=new Map();
+    for(const s of srcs)for(const p of s.peers){
+      if(p.kind!=='viewer'||(p.isMe&&p.sameTab))continue;
+      const pr=p.presence||{},id=typeof pr.tid==='string'?pr.tid.slice(0,32):'';
+      if(!id||id===tid)continue;
+      const ex=m.get(id),at=p.updatedAt||0;
+      if(!ex||at>ex.updatedAt)m.set(id,{peer:id,isMe:false,sameTab:false,kind:'viewer',presence:pr,updatedAt:at});
+    }
+    const me=prev.get(tid);m.set(tid,me&&me.presence===mine?me:meRow());
+    const joined=[],left=[],updated=[];
+    for(const [id,p] of m){const o=prev.get(id);if(!o)joined.push(p);else if(o.presence!==p.presence)updated.push(p);else m.set(id,o);}
+    for(const [id,o] of prev)if(!m.has(id))left.push(o);
+    prev=m;
+    if(!joined.length&&!left.length&&!updated.length)return;
+    const ch={peers:[...m.values()],joined,left,updated};for(const f of subs)f(ch);
+  }
+  // coalesce: several networks answering in the same frame make one delivery
+  const kick=()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;recompute();},0);};
+  const send=(s,obj)=>{try{return Promise.resolve(s.room.presence(obj)).catch(e=>{if(!warned){warned=true;console.warn('Stormfall: presence refused on '+s.tag,e);}});}catch(e){return Promise.resolve();}};
+  return {code,tid,
+    has:tag=>srcs.some(s=>s.tag===tag),
+    tags:()=>srcs.map(s=>s.tag),
+    add(room,tag){
+      if(!open){try{room.leave&&room.leave();}catch(e){}return;}
+      const s={room,tag,peers:[]};srcs.push(s);
+      room.onPeers(ch=>{s.peers=ch.peers;kick();},()=>{removeFrom(srcs,s);kick();});
+      send(s,{...mine});kick();
+    },
+    // size of my presence once this patch is merged in, as the room measures it
+    sizeWith(patch){const o={...mine};for(const k in patch){if(patch[k]==null)delete o[k];else o[k]=patch[k];}try{return JSON.stringify(o).length;}catch(e){return 1e9;}},
+    presence(patch){
+      const o={...mine};for(const k in patch){if(patch[k]===null||patch[k]===undefined)delete o[k];else o[k]=patch[k];}
+      o.tid=tid;mine=o;kick();
+      return Promise.all(srcs.map(s=>send(s,patch))).then(()=>{});
+    },
+    onPeers(fn){subs.push(fn);setTimeout(()=>{if(open)fn({peers:[...prev.values()].length?[...prev.values()]:[meRow()],joined:[...prev.values()].length?[...prev.values()]:[meRow()],left:[],updated:[]});},0);return()=>{};},
+    leave(){open=false;subs.length=0;
+      for(const s of srcs){try{if(s.tag==='claude'){const clr={};for(const k in mine)clr[k]=null;s.room.presence(clr).catch(()=>{});}else s.room.leave();}catch(e){}}
+      srcs.length=0;}};
+}
 let connectGen=0;
 async function connectRoom(code){
-  const gen=++connectGen;
-  NET.transport=null;NET.roomTried=false;renderLobby();
-  let pending=null;
-  try{
-    const r=await p2pRoom(code||roomCode());pending=r;
-    for(let i=0;i<60&&!r.relaysUp();i++)await new Promise(f=>setTimeout(f,200));
-    if(gen!==connectGen){r.leave();return;}
-    if(r.relaysUp()){NET.transport='p2p';NET.roomTried=true;attachRoom(r);return;}
-  }catch(e){}
-  if(gen!==connectGen){if(pending)pending.leave();return;}
-  let cr=null;
-  try{cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;}catch(e){}
-  if(gen!==connectGen){if(pending)pending.leave();return;}
-  if(cr){NET.transport='claude';NET.roomTried=true;attachRoom(cr);}
-  // keep trying the online lobby in the background: relays can be slow to answer, and it is the one friends can join
-  if(pending){
-    for(let i=0;i<150;i++){await new Promise(f=>setTimeout(f,2000));
-      if(gen!==connectGen||NET.mp){if(gen!==connectGen)pending.leave();return;}
-      if(pending.relaysUp()&&game==='menu'){NET.mode='idle';NET.joinedTo=null;NET.transport='p2p';NET.roomTried=true;attachRoom(pending);return;}}
-    pending.leave();
-  }
-  if(!NET.room){NET.roomTried=true;renderLobby();setTimeout(()=>{if(gen===connectGen&&!NET.room&&!NET.mp)connectRoom(code);},5000);}
+  const gen=++connectGen;code=code||roomCode();
+  if(!NET.tid)NET.tid=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+  const hub=makeHub(code);let attached=false;
+  NET.transport='hub';NET.roomTried=false;renderLobby();
+  const live=()=>gen===connectGen;
+  const use=(room,tag)=>{if(!live()){try{tag==='p2p'&&room.leave();}catch(e){}return;}hub.add(room,tag);
+    if(!attached){attached=true;NET.roomTried=true;attachRoom(hub);}else if(game==='menu')renderLobby();};
+  // claude.ai's own room (people the artifact is shared with). Everyone on this page shares one lobby there.
+  (async()=>{let cr=null;try{cr=window.claude&&typeof window.claude.use==='function'?await window.claude.use('room'):null;}catch(e){}
+    if(cr)use(cr,'claude');})();
+  // the peer-to-peer lobby (works on any link); relays can be slow, so keep waiting in the background
+  (async()=>{let r=null;try{r=await p2pRoom(code);}catch(e){return;}
+    for(let i=0;i<300&&live();i++){if(r.relaysUp()){use(r,'p2p');return;}await new Promise(f=>setTimeout(f,i<60?200:2000));}
+    r.leave();})();
+  // nothing reachable yet: say so (solo still works) and keep trying
+  setTimeout(()=>{if(live()&&!attached){NET.roomTried=true;renderLobby();}},12000);
 }
 async function switchRoom(code){
   if(NET.mp||game!=='menu')return;
